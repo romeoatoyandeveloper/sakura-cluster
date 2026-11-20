@@ -46,6 +46,7 @@ const TYPES = {
     deco: [],
     nav: [],
     sakura: ['plates'],
+    photo: ['art', 'photo'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 

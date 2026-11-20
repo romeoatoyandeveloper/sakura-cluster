@@ -2,6 +2,14 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 20 2026
+
+- **Cluster Themes 0.20.0, HUD Widgets 0.15.1:**
+  - **Installs on units without a numbered media instance.** 0.19.0 asked the head unit for its now-playing service (HmiMediaState, for Vector's music panel) as instance "1". Some units have that service only under named instances (HMI_CID for the front screen, HMI_FoMo_Left and HMI_FoMo_Right for the rear ones), and the Store refused to install 0.19.1 there, even though the music panel is optional. Cluster Themes stopped asking for the service in 0.19.2, so Vector's music panel shows its readouts (average speed, peak boost, lateral G) for now. HUD Widgets now asks for any instance, and both apps read the front screen's, HMI_CID, wherever the service is listed.
+  - **New theme: My Boy,** a photo of a little one in the middle of the cluster on a night-blue sky with twinkling stars. The revs are two strips of checks in his romper's blue and cream, and a small heart under the gear breathes while the car stands. The photo is drawn by the GPU from one uploaded picture (3.6 MiB of the cluster's 16 MiB pixel memory), so the whole theme is 3 layers.
+  - HUD Widgets: the install fix only.
+  - Not yet tested on a car.
+
 ## Nov 15 2026
 
 - **Cluster Themes 0.19.0, HUD Widgets 0.15.0:**

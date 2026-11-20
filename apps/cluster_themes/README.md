@@ -108,6 +108,18 @@ Three more Sakura scenes share a slimmer layout: wide plates with the value on t
 <p align="center"><img src="../../docs/images/cluster-sakura-moon.png" width="900" alt="Sakura: Moon Mirror"></p>
 <p align="center"><img src="../../docs/images/cluster-sakura-grove.png" width="900" alt="Sakura: Hanami Grove"></p>
 
+### My Boy
+
+A photo of a little one in the middle of the cluster, on a night-blue sky with faint twinkling stars and a soft glow behind his head. The photo is cut out and drawn pixel for pixel, with his face on the cluster's centre line and his head clear of the driver camera on newer cars.
+
+- **Left:** the drive mode, the speed and its unit.
+- **Right:** the gear, with a small heart under it that slowly breathes while the car stands still.
+- **Revs:** two strips of checks in his romper's blue and cream, one under each side, filling from the outer ends towards him. They turn red at your redline, and every lit square flashes red at the shift point.
+- **Under them:** oil and coolant on the left, fuel and range on the right.
+- **Bottom:** the clock on the left and the outside temperature on the right, with BMW's own gear letter.
+
+To make one from your own photo: `tools/bake_photo_art.py prep` cuts it out (it needs a cut-out on black, as a phone's "lift subject" gives), then `tools/bake_photo_art.py` bakes it and `tools/gen_myboy.py` lays it out.
+
 ### Retro 80s
 
 An 80s digital dash: amber seven-segment digits with their unlit 8s showing faintly behind, for the gear and the speed. A segmented rev bar runs across the top, bar graphs show oil, water and fuel on the left, and boost and two readouts sit on the right. The clock, range and outside temperature along the bottom are seven-segment digits too.

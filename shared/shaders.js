@@ -1903,4 +1903,111 @@ void main() {
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA };
+const PHOTO = `// A photo theme in one cluster-render "effect" layer (GLSL ES 1.00), My Boy's; every position is in layer px (u_size),
+// sent by hud.js from panel px. Back to front: a night-blue background (u_bg at the top to u_bg2 at the bottom) with
+// faint twinkling stars (one chance a 48 px cell; u_t is a phase 0..2 pi, each star runs at 1, 2 or 3 times it), a soft
+// halo behind the photo (u_halo: centre x, y and radius x, y), the photo from the RGBA asset u_art drawn 1:1 at u_photo
+// (x, y, w, h; its alpha is the cut-out; texels are read at their centres, so nearest and bilinear sampling read the
+// same), and two checker rev strips (u_stripL / u_stripR: x, y, w, h, two rows of u_sq px squares in the romper's blue
+// and cream) that fill from their outer ends towards the photo, mirrored. u_rev: x columns lit (of each strip's
+// w / u_sq), y the first red column, z the shift flash (0 or 1). u_keep (x0, y0, x1, y1) stays see-through: BMW's gear
+// letter in its bottom strip. A heart in u_pink at u_heart (centre x, y, size px, scale: it breathes while the car
+// stands). One texture read (the photo), no loops. v_uv (0,0) is the top-left.
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 v_uv;
+uniform sampler2D u_art;
+uniform vec2 u_size;
+uniform vec4 u_photo;
+uniform vec4 u_halo;
+uniform vec4 u_stripL;
+uniform vec4 u_stripR;
+uniform vec4 u_rev;
+uniform vec4 u_keep;
+uniform vec4 u_heart;
+uniform vec3 u_bg;
+uniform vec3 u_bg2;
+uniform vec3 u_blue;
+uniform vec3 u_cream;
+uniform vec3 u_red;
+uniform float u_sq;
+uniform float u_t;
+uniform float u_dim;
+
+// Dave Hoskins' hash (no sin, so it holds in mediump): 0..1 from a small whole-number cell
+float hash(vec2 p) {
+    vec3 q = fract(vec3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
+}
+
+// Inigo Quilez's heart: signed distance, the heart in x -0.6..0.6, y 0..1 (y up)
+float heart(vec2 p) {
+    p.x = abs(p.x);
+    if (p.y + p.x > 1.0) return length(p - vec2(0.25, 0.75)) - 0.35355;
+    vec2 a = p - vec2(0.0, 1.0), b = p - 0.5 * max(p.x + p.y, 0.0);
+    return sqrt(min(dot(a, a), dot(b, b))) * sign(p.x - p.y);
+}
+
+// a checker strip's colour at p (rgb), a = 1 on a square; fromRight: it fills from its right end
+vec4 strip(vec2 p, vec4 s, float fromRight) {
+    vec2 q = p - s.xy;
+    if (q.x < 0.0 || q.y < 0.0 || q.x >= s.z || q.y >= s.w) return vec4(0.0);
+    vec2 cell = floor(q / u_sq), o = q - cell * u_sq;
+    if (o.x < 2.0 || o.y < 2.0 || o.x >= u_sq - 2.0 || o.y >= u_sq - 2.0) return vec4(0.0);   // 4 px between squares
+    float k = fromRight > 0.5 ? floor(s.z / u_sq) - 1.0 - cell.x : cell.x;   // columns counted from the outer end
+    float cream = mod(k + cell.y, 2.0);
+    vec3 off = mix(u_bg, cream > 0.5 ? u_cream : u_blue, cream > 0.5 ? 0.13 : 0.24);
+    vec3 on = cream > 0.5 ? u_cream : u_blue;
+    if (k >= u_rev.y) on = cream > 0.5 ? mix(u_cream, u_red, 0.45) : u_red;
+    if (u_rev.z > 0.5) on = cream > 0.5 ? u_cream : u_red;
+    return vec4(k < u_rev.x ? on : off, 1.0);
+}
+
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (p.x >= u_keep.x && p.x < u_keep.z && p.y >= u_keep.y && p.y < u_keep.w) { gl_FragColor = vec4(0.0); return; }
+    vec3 c = mix(u_bg, u_bg2, v_uv.y);
+
+    // stars: at most one a 48 px cell, fading out below y 300, each twinkling at its own pace
+    vec2 cell = floor(p / 48.0);
+    float h = hash(cell);
+    if (h > 0.62) {
+        vec2 sp = cell * 48.0 + 8.0 + 32.0 * vec2(hash(cell + 17.0), hash(cell + 41.0));
+        float d = length(p - sp);
+        float tw = 0.55 + 0.45 * sin(u_t * (1.0 + floor((h - 0.62) * 7.8)) + h * 60.0);   // 1, 2 or 3 x the clock
+        float b = (smoothstep(2.2, 0.0, d) + 0.35 * smoothstep(6.0, 0.0, d)) * tw * (1.0 - smoothstep(300.0, 520.0, p.y));
+        c = mix(c, mix(u_cream, u_blue, hash(cell + 5.0)), clamp(b, 0.0, 1.0) * 0.55);
+    }
+
+    // the halo behind him
+    vec2 hd = (p - u_halo.xy) / u_halo.zw;
+    c = mix(c, u_blue, 0.42 * exp(-2.2 * dot(hd, hd)));
+
+    // the photo, 1:1
+    vec2 q = p - u_photo.xy;
+    if (q.x >= 0.0 && q.y >= 0.0 && q.x < u_photo.z && q.y < u_photo.w) {
+        vec4 t = texture2D(u_art, (floor(q) + 0.5) / u_photo.zw);
+        c = mix(c, t.rgb, t.a);
+    }
+
+    // the heart, with a soft glow
+    vec2 hq = (p - u_heart.xy) / (u_heart.z * u_heart.w);
+    if (u_heart.z > 0.0 && abs(hq.x) < 1.2 && abs(hq.y) < 1.2) {
+        float hd2 = heart(vec2(hq.x, 0.44 - hq.y) * 1.25) * u_heart.z * u_heart.w / 1.25;
+        c = mix(c, u_red, 0.35 * exp(-0.18 * max(hd2, 0.0)) * step(0.0, hd2));
+        c = mix(c, u_red, clamp(0.5 - hd2, 0.0, 1.0));
+    }
+
+    vec4 s = strip(p, u_stripL, 0.0);
+    if (s.a > 0.5) c = s.rgb;
+    s = strip(p, u_stripR, 1.0);
+    if (s.a > 0.5) c = s.rgb;
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA, photo: PHOTO };

@@ -8,8 +8,9 @@ apps/<id>/        one folder per app: app.json, main.js (entry), NOTICE, README
 shared/           the cluster-render drawing engine both apps use; an app lists the files it needs
                   in app.json "shared" and the build copies them in
 kit/              cauliflowermossgrape's MGU App Kit (MIT, kit/LICENSE): runtime/ ships inside each app,
-                  tools/ builds it. One change from upstream: kit/tools/build.py copies the app.json
-                  "shared" files (marked "bimmer-lab addition")
+                  tools/ builds it. Two changes from upstream (marked "bimmer-lab addition"):
+                  kit/tools/build.py copies the app.json "shared" files, and kit/runtime/car.js takes an
+                  interface's "$instance" (HmiMediaState's front screen is "HMI_CID", not "1")
 bench/            Mac test bench (fake cluster-render + the kit's stub head unit), see bench/README.md
 tools/            bake_fonts.py re-bakes each app's fonts from tools/fonts-src (needs Pillow)
 scripts/          deploy.sh pushes layout files to the car over SSH
@@ -40,6 +41,7 @@ Each app's layouts are `apps/<id>/hud/layouts/<name>.json` (`schemaVersion: 2`).
 - **Sport theme:** `sdash` draws the whole theme (brackets, fills, the map cut-out or a black middle, fuel and oil bars, bottom strip) in one shader. Text `near: ["speed" | "rpm", i]` lights up the scale label nearest the value.
 - **GT3 theme:** `boxes` draws the background, the map cut-out and every framed box in one shader (array uniforms, up to 12 boxes); the labels are text widgets on top.
 - **M theme pieces:** `mdash` (the whole backdrop: cards, the tyre block's car glyph, side gauges and the four setup bars in one shader, nothing uploaded), `mtach` (the bowed glass rev blade with its red marker), `icon` (line icons drawn in `shared/icons.js`), and text `color2` (a chrome fade).
+- **Photo themes:** `photo` draws a cut-out photo 1:1 from an RGBA asset (`hud/art/<name>.json`), a night sky, a halo and two checker rev strips in one shader. `tools/bake_photo_art.py prep <photo.jpg> <name> <x0,y0,x1,y1> <width>` crops and cuts out the original (kept out of the repo) into `tools/photo-src/<name>.png`, `tools/bake_photo_art.py` bakes every PNG there, and `tools/gen_myboy.py apps/cluster_themes` writes My Boy's layout. The picture costs w x h x 8 bytes of pixel memory (My Boy's 752 x 620: 3.6 MiB).
 - **Layout generators:** the GT3, Sport and M layouts are written by `design/gen_gt3.py`, `gen_sport.py` and `gen_m.py` (next to the repo, `python3 design/gen_m.py apps/cluster_themes/hud/layouts/m.json`); edit the generator, not the JSON.
 - **Calibration:** `grid` (lines every `step` px, brighter every `major` steps) and `gridlabels` (x/y labels every `step` px). Each app ships a `grid.json` layout.
 - **Off:** the layout name `off` draws nothing and releases the screen. With `byMode` on, the `inComfort` / `inSport` / `inEco` settings pick the layout from the car's drive mode (FES `statusFESVehicleDynamicSwitchHMI`).

@@ -107,6 +107,14 @@ CLUSTER_FONTS = [
     ('b_unit', 'Outfit[wght].ttf', 26, UPPER + LOWER + '/', 0, 'Medium'),
     ('b_gear', 'Outfit[wght].ttf', 32, DIGITS + 'PRNDSM-', 0, 'SemiBold'),
     ('b_scale', 'Outfit[wght].ttf', 20, DIGITS, 0, 'Medium'),
+    # My Boy: Outfit again, rounder and heavier than Ribbon's: the speed, the gear, the readouts, the bottom row (clock,
+    # outside), the units and the small spaced labels
+    ('mb_speed', 'Outfit[wght].ttf', 168, DIGITS + '-', 0, 'Medium'),
+    ('mb_gear', 'Outfit[wght].ttf', 150, DIGITS + 'PRNDSM-', 0, 'Medium'),
+    ('mb_val', 'Outfit[wght].ttf', 50, DIGITS + '.:-+°% ', 0, 'Regular', None, '°'),
+    ('mb_row', 'Outfit[wght].ttf', 34, DIGITS + ':.-+° CFAPM', 0, 'Regular', None, '°'),
+    ('mb_unit', 'Outfit[wght].ttf', 26, LOWER + UPPER + DIGITS + '/°.-+ ', 0, 'Medium'),
+    ('mb_label', 'Outfit[wght].ttf', 21, UPPER + DIGITS + " .-'", 0, 'SemiBold'),
     # Sakura: pixel fonts (SIL OFL), drawn without anti-aliasing so every font pixel stays a hard square. Press Start 2P
     # is an 8x8 font: at multiples of 32 px each font pixel is a whole number of the theme's 4 px art pixels.
     # Silkscreen for the English labels, DotGothic16 (16-dot) at 32 px for the Japanese ones (2 px a dot).

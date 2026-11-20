@@ -176,6 +176,14 @@
  *             "petals": false (none), or { x0: [16 start x], y0: start y or [16], drift: px per 24 s loop (240) }. The
  *             petals fall from y0 to past the bottom in the loop and drift faster with the speed (up to 1.75x).
  *             Its labels and values are text widgets on top.
+ *   photo     effect layer (shaders.js photo): a photo theme's whole backdrop (My Boy), in panel px: a night-blue background
+ *             (roles "bg" at the top to "well" at the bottom, or the role "bottom") with faint twinkling stars, a soft halo
+ *             "halo" [cx, cy, rx, ry] in role "blue", the photo from the RGBA asset hud/art/<"art">.json (tools/bake_photo_art.py,
+ *             its alpha the cut-out; uploaded once per connection) drawn 1:1 with its top-left at "photo" [x, y], and two
+ *             checker rev strips "strips" [[x, y, w, h] x 2] of "sq" px squares (24) in roles "blue" and "cream" that fill
+ *             from their outer ends towards the photo (0 .. the bar max, "pink" from the redline, red flashes at the shift
+ *             point); "keep" [x0, y0, x1, y1] stays see-through (BMW's gear letter); "heart" [cx, cy, size] a small heart in
+ *             "pink" that breathes while the car stands. Its labels and values are text widgets.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
  * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
  *   is per connection, so a second socket from the same app gets another 8 (DukeAPenguin saw 28 layers over four
@@ -358,6 +366,7 @@ const MVIEW_RPM = 8000;            // the M view theme's rev scale: 0..8
 const MVIEW_SPEED = { us: 200, metric: 330 };
 const VDASH_RPM = 8000;            // the Vector theme's rev counter: 0..8
 const MEDIA_IF = 'de.bmw.infotainment.hmi.hmimediastate.HmiMediaState';   // the head unit's now playing (front)
+const MEDIA_INSTANCE = 'HMI_CID';      // its front screen's instance (the rear screens are HMI_FoMo_Left / _Right)
 const MEDIA_TYPES = { 1: 'ARTIST', 2: 'ALBUM', 3: 'TITLE' };
 /** A song's text for the baked fonts: accents dropped, curly quotes and dashes made plain, the rest left out. */
 function mediaText(v) {
@@ -377,6 +386,11 @@ const NIGHT_DIM = 0.6;
 // Sakura (widget type "sakura"): the petals' start x (panel px), each petal 1.5 s after the one before in a 24 s loop
 const SAKURA_X0 = [-200, 980, 240, 1560, 600, 1320, -40, 1760, 420, 1140, 820, 1660, 80, 1400, 700, 1880];
 const SAKURA_PETAL_MS = 80;           // the petals move at most 12.5 times a second (an art pixel is 4 panel px)
+// Photo themes (widget type "photo"): the stars twinkle on a clock sent at most 8 times a second, 0.6 rad a second at
+// the slowest (a star's whole cycle 10.5 s, the fastest three times that pace)
+const PHOTO_STAR_MS = 125;
+const PHOTO_STAR_RAD = 0.6;
+const PHOTO_HEART_S = 4;             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
 const PRESS_UNITS = { 1: 'BAR', 2: 'KPA', 3: 'PSI' }, TEMP_UNITS = { 1: 'C', 2: 'F' };
 const PRESS_TO_BAR = { BAR: 1, KPA: 0.01, PSI: 1 / 14.5038 };
@@ -817,8 +831,13 @@ class HudApp {
         };
         // now playing (the Vector layouts' music panel): the head unit's own media state, front screen only. Optional
         // (app.json): not every unit may have it, and whether CarPlay fills it is not known yet. Added last, so the
-        // one-at-a-time SOME/IP setup (signals.js) reaches every vehicle signal before it, whatever this one does
+        // one-at-a-time SOME/IP setup (signals.js) reaches every vehicle signal before it, whatever this one does.
+        // Its instances are named by screen, not numbered: a 2026 unit's catalog has HMI_CID (the front, central
+        // display), HMI_FoMo_Left and HMI_FoMo_Right (the rear screens) and no "1" (the Store refused Cluster Themes 0.19.1's
+        // "1" there), so HUD Widgets' app.json asks for "*" and the front one is watched here. Cluster Themes dropped the
+        // service in 0.19.2: without its SOME/IP config this watch only logs a warning, and the panel shows its readouts
         extra[MEDIA_IF] = {
+            $instance: MEDIA_INSTANCE,
             playerMetadata: (v) => this._mediaFeed('meta', v),
             trackProgress: (v) => this._mediaFeed('progress', v),
         };
@@ -1089,7 +1108,7 @@ class HudApp {
         const ref = x.c.asset({ target: this.target, format: 'rgba8', w: d.w, h: d.h, sampling: 'nearest' });
         if (!ref) { this.log.warn('widget "' + x.w.id + '": art asset refused (' + d.w + 'x' + d.h + ')'); return null; }
         x.c.pixels(ref, null, px);
-        this.arts.set(key, { ref, c: x.c, bytes: px.length * 2 });
+        this.arts.set(key, { ref, c: x.c, bytes: px.length * 2, w: d.w, h: d.h });
         this.log.info('art "' + name + '"' + (x.ci ? ' on connection ' + (x.ci + 1) : '') + ': ' + d.w + 'x' + d.h + ' RGBA asset, ' + mib(px.length * 2) + ' of pixel memory');
         return ref;
     }
@@ -2346,6 +2365,33 @@ class HudApp {
             c.uniform(ref, 'u_warn', [0, 0, 0, 0]);
             c.uniform(ref, 'u_g', [0, 0, 0, 0]);
             c.uniform(ref, 'u_pet', new Array(32).fill(-50), { type: 'vec4' });
+        } else if (w.type === 'photo') {
+            // shaders.js photo: the art is the photo itself (tools/bake_photo_art.py), drawn 1:1, so its size is the art's
+            const art = this._artAsset(x, w.art);
+            const a = art ? this.arts.get(x.ci + ':' + w.art) : null;
+            if (art) c.bind(ref, 'u_art', art);
+            const ph = w.photo, hl = w.halo || [0, 0, 1, 1], sq = w.sq || 24, keep = w.keep || [0, 0, 0, 0];
+            const rel = (r) => (r ? [r[0] - w.x, r[1] - w.y, r[2], r[3]] : [0, 0, 0, 0]);
+            c.uniform(ref, 'u_size', [w.w, w.h]);
+            c.uniform(ref, 'u_photo', a ? [ph[0] - w.x, ph[1] - w.y, a.w, a.h] : [0, 0, 0, 0]);
+            c.uniform(ref, 'u_halo', [hl[0] - w.x, hl[1] - w.y, hl[2], hl[3]]);
+            c.uniform(ref, 'u_stripL', rel((w.strips || [])[0]));
+            c.uniform(ref, 'u_stripR', rel((w.strips || [])[1]));
+            c.uniform(ref, 'u_sq', [sq]);
+            c.uniform(ref, 'u_keep', [keep[0] - w.x, keep[1] - w.y, keep[2] - w.x, keep[3] - w.y]);
+            const hr = w.heart;
+            c.uniform(ref, 'u_heart', hr ? [hr[0] - w.x, hr[1] - w.y, hr[2], 1] : [0, 0, 0, 1]);
+            c.uniform(ref, 'u_bg', rgb(color(t, 'bg')));
+            c.uniform(ref, 'u_bg2', rgb(color(t, w.bottom || 'well')));
+            c.uniform(ref, 'u_blue', rgb(color(t, 'blue')));
+            c.uniform(ref, 'u_cream', rgb(color(t, 'cream')));
+            c.uniform(ref, 'u_red', rgb(color(t, 'pink')));
+            c.uniform(ref, 'u_dim', [this.nightOn ? 0.8 : 1]);
+            // the strips' columns: as many as the shorter strip holds
+            const cols = (w.strips || []).reduce((n, r) => Math.min(n, Math.floor(r[2] / sq)), 99);
+            x.cols = cols === 99 ? 0 : cols;
+            c.uniform(ref, 'u_rev', [0, Math.round(this._redMarks(this._barMax())[0] * x.cols), 0, 0]);
+            c.uniform(ref, 'u_t', [0]);
         } else if (w.type === 'meter') {
             const cs = w.colors || ['fg', 'fg', 'hot'];
             c.uniform(ref, 'u_size', [w.w, w.h]);
@@ -2674,6 +2720,33 @@ class HudApp {
         send('u_pet', pts, undefined, { type: 'vec4' });
     }
 
+    /**
+     * A photo theme (widget type "photo"): the checker strips' lit columns (rpm over the bar max), the shift flash (the lit
+     * squares red at 4 Hz at the shift point), and at most every PHOTO_STAR_MS the stars' clock (a phase 0..2 pi at
+     * PHOTO_STAR_RAD a second; the shader runs each star at a whole multiple of it, so the wrap never shows) and the heart.
+     */
+    _photoUpdate(x, now, force) {
+        const rpm = this._raw('rpm'), n = x.cols;
+        const lit = isNum(rpm) && n ? Math.min(n, Math.floor(Math.max(0, rpm) / (this._barMax() / n))) : 0;
+        const flash = this._shift().now && Math.floor(now / 125) % 2 === 0 ? 1 : 0;
+        const red = Math.round(this._redMarks(this._barMax())[0] * n);
+        const key = lit + '|' + flash + '|' + red;
+        if (force || key !== x.last) {
+            x.last = key;
+            x.c.uniform(x.ref, 'u_rev', [lit, red, flash, 0]);
+        }
+        if (!force && now - (x.starAt || 0) < PHOTO_STAR_MS) return;
+        x.starAt = now;
+        x.c.uniform(x.ref, 'u_t', [(now / 1000 * PHOTO_STAR_RAD) % (2 * Math.PI)]);
+        // the heart breathes (6 %, once every PHOTO_HEART_S) only while the car stands; still while it moves
+        const hr = x.w.heart, sp = this._raw('speed');
+        if (!hr) return;
+        const sc = isNum(sp) && sp >= 3 ? 1 : Math.round((1 + 0.06 * Math.sin(now / 1000 * 2 * Math.PI / PHOTO_HEART_S)) * 100) / 100;
+        if (!force && sc === x.heartAt) return;
+        x.heartAt = sc;
+        x.c.uniform(x.ref, 'u_heart', [hr[0] - x.w.x, hr[1] - x.w.y, hr[2], sc]);
+    }
+
     _update(x, now, force) {
         const w = x.w;
         if (w.type === 'atext') {
@@ -2836,6 +2909,7 @@ class HudApp {
             x.c.uniform(x.ref, 'u_value', [q]);
             if (w.peak) x.c.uniform(x.ref, 'u_peak', [pk > q ? pk : -1]);
         } else if (w.type === 'sakura') this._sakuraUpdate(x, now, force);
+        else if (w.type === 'photo') this._photoUpdate(x, now, force);
         else if (w.type === 'sdash') {
             const us = this.setting('units') === 'us';
             const sp = this._raw('speed'), rpm = this._raw('rpm'), fuel = this._raw('fuel'), oil = this._raw('oil');

@@ -260,6 +260,19 @@ THEMES.sakura_grove = Object.assign({}, THEMES.sakura, {       // Hanami Grove: 
     name: 'Sakura Grove', dim: [210, 176, 214, 255], jp: [240, 150, 190, 255],
     panel: [23, 12, 44, 255], line: [78, 42, 94, 255], track: [46, 24, 68, 255], bg: [23, 12, 44, 255], well: [23, 12, 44, 255],
 });
+// My Boy (layout myboy.json): his photo on a night-blue sky, in his romper's colours. The backdrop is one shader (shaders.js
+// photo): "bg" to "well" the sky, "blue" and "cream" the romper's checks (its slate blue lifted for the LCD) in the rev
+// strips and the halo, "pink" their red zone. The text: values, secondary values, labels.
+THEMES.myboy = {
+    name: 'My Boy',
+    fg: [250, 246, 238, 255], dim: [146, 166, 206, 255], sec: [226, 230, 242, 255],
+    blue: [124, 152, 208, 255], cream: [240, 232, 220, 255], pink: [255, 96, 124, 255],
+    track: [40, 52, 84, 255], arc: [124, 152, 208, 255], glow: 0, stripe: false,
+    bar: { low: [124, 152, 208], mid: [240, 232, 220], high: [255, 96, 124], midAt: 'shift' },
+    rev: { from: [124, 152, 208], to: [255, 96, 124] },
+    bg: [12, 17, 38, 255], well: [3, 4, 10, 255], panel: [12, 17, 38, 255], line: [40, 52, 84, 255],
+    head: [146, 166, 206, 255], ink: [12, 12, 14, 255], accent: [124, 152, 208, 255],
+};
 Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });
 
 // Redline layout (after cauliflowermossgrape's Redline app): rev bar segments ramp rev.from -> rev.to up to

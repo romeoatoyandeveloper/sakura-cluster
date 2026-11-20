@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 2,
+  "name": "My Boy",
+  "packWaste": 3,
+  "theme": "myboy",
+  "widgets": [
+    {
+      "id": "scene",
+      "type": "photo",
+      "class": "content",
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "art": "myboy",
+      "photo": [
+        519,
+        100
+      ],
+      "halo": [
+        960,
+        300,
+        330,
+        300
+      ],
+      "sq": 24,
+      "strips": [
+        [
+          70,
+          452,
+          456,
+          48
+        ],
+        [
+          1394,
+          452,
+          456,
+          48
+        ]
+      ],
+      "keep": [
+        1380,
+        660,
+        1460,
+        720
+      ],
+      "heart": [
+        1622,
+        406,
+        30
+      ]
+    },
+    {
+      "id": "mode",
+      "type": "text",
+      "z": 5,
+      "x": 70,
+      "y": 182,
+      "w": 456,
+      "h": 21,
+      "text": "{{mode}}",
+      "font": "mb_label",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 70,
+      "y": 251,
+      "w": 456,
+      "h": 125,
+      "text": "{{speed}}",
+      "font": "mb_speed",
+      "color": "fg",
+      "align": "center"
+    },
+    {
+      "id": "speed_u",
+      "type": "text",
+      "z": 5,
+      "x": 70,
+      "y": 396,
+      "w": 456,
+      "h": 29,
+      "text": "{{u:speedLc}}",
+      "font": "mb_unit",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "id": "gear_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1394,
+      "y": 182,
+      "w": 456,
+      "h": 21,
+      "text": "GEAR",
+      "font": "mb_label",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1394,
+      "y": 263,
+      "w": 456,
+      "h": 114,
+      "text": "{{gear}}",
+      "font": "mb_gear",
+      "color": "fg",
+      "align": "center"
+    },
+    {
+      "id": "oil_lab",
+      "type": "text",
+      "z": 5,
+      "x": 70,
+      "y": 538,
+      "w": 228,
+      "h": 21,
+      "text": "OIL",
+      "font": "mb_label",
+      "color": "dim",
+      "align": "center",
+      "warnOf": "oil"
+    },
+    {
+      "id": "oil",
+      "type": "text",
+      "z": 5,
+      "x": 70,
+      "y": 578,
+      "w": 228,
+      "h": 39,
+      "text": "{{oil}}°",
+      "font": "mb_val",
+      "color": "fg",
+      "align": "center"
+    },
+    {
+      "id": "coolant_lab",
+      "type": "text",
+      "z": 5,
+      "x": 298,
+      "y": 538,
+      "w": 228,
+      "h": 21,
+      "text": "COOLANT",
+      "font": "mb_label",
+      "color": "dim",
+      "align": "center",
+      "warnOf": "coolant"
+    },
+    {
+      "id": "coolant",
+      "type": "text",
+      "z": 5,
+      "x": 298,
+      "y": 578,
+      "w": 228,
+      "h": 39,
+      "text": "{{coolant}}°",
+      "font": "mb_val",
+      "color": "fg",
+      "align": "center"
+    },
+    {
+      "id": "fuel_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1394,
+      "y": 538,
+      "w": 228,
+      "h": 21,
+      "text": "FUEL",
+      "font": "mb_label",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "id": "fuel",
+      "type": "text",
+      "z": 5,
+      "x": 1394,
+      "y": 578,
+      "w": 228,
+      "h": 39,
+      "text": "{{fuelPct}}%",
+      "font": "mb_val",
+      "color": "fg",
+      "align": "center"
+    },
+    {
+      "id": "range_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1622,
+      "y": 538,
+      "w": 228,
+      "h": 21,
+      "text": "RANGE {{u:dist}}",
+      "font": "mb_label",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "id": "range",
+      "type": "text",
+      "z": 5,
+      "x": 1622,
+      "y": 578,
+      "w": 228,
+      "h": 39,
+      "text": "{{range}}",
+      "font": "mb_val",
+      "color": "fg",
+      "align": "center"
+    },
+    {
+      "id": "clock",
+      "type": "text",
+      "z": 5,
+      "x": 70,
+      "y": 668,
+      "w": 456,
+      "h": 28,
+      "text": "{{time}} {{ampm}}",
+      "font": "mb_row",
+      "color": "sec",
+      "align": "center"
+    },
+    {
+      "id": "out",
+      "type": "text",
+      "z": 5,
+      "x": 1470,
+      "y": 668,
+      "w": 304,
+      "h": 28,
+      "text": "{{ambientN}}{{u:temp}}",
+      "font": "mb_row",
+      "color": "sec",
+      "align": "center"
+    }
+  ]
+}
