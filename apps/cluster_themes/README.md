@@ -2,7 +2,7 @@
 
 <img src="icon.png" width="72" align="left" alt="Cluster Themes icon">
 
-Redraws the whole instrument cluster in a theme of your choice. Open **Cluster Themes** from the apps menu on the center screen: its own page has the themes with pictures, the readouts, the badge, the Waze map, warnings and settings.
+Redraws the whole instrument cluster in a theme of your choice. Open **Cluster Themes** from the apps menu on the center screen: its own page has seven tabs along the top: Theme, Gauges, Model name, Waze map, Warnings & shift lights, G-meter and Settings. Every button says what it does, with a short grey line under it where the name alone isn't enough.
 
 <p align="center"><img src="../../docs/images/cluster-vfd.png" width="900" alt="VFD theme"></p>
 
@@ -17,7 +17,7 @@ Every theme fills the cluster and shows its own clock, range and outside tempera
 A current M8's cluster, traced off a photo of it and drawn on black.
 
 - **Middle:** two bowed glass rev blades either side of the gear and speed, reading 0 to 7000 rpm like the M40i's own cluster. A red marker rides each blade at the rpm, the blade glows below it, and orange and red marks sit before and past your redline. The gear shows with its shifter programme: P, D3, S3 or M3, and the drive mode sits under the speed.
-- **Left:** a black card with a grey rim and four readouts where the M8 has its tyre block: boost, coolant, oil and intake air out of the box, each one changeable on the Readouts tab. The fuel dial sits over the card's lower corner, drawn like the M8's: a thin glass bracket inside a hatched chrome bezel, lit from the bottom up to the level, with a thin red line at the level.
+- **Left:** a black card with a grey rim and four readouts where the M8 has its tyre block: boost, coolant, oil and intake air out of the box, each one changeable on the Gauges tab. The fuel dial sits over the card's lower corner, drawn like the M8's: a thin glass bracket inside a hatched chrome bezel, lit from the bottom up to the level, with a thin red line at the level.
 - **Right:** what the engine, chassis, steering and gearbox are set to, as four rows with a step bar, and the oil temperature dial, the same glass bracket. The rows follow the drive mode buttons: Eco Pro, Comfort, Sport, Sport Plus and Sport Individual. The car only reports that an Individual setup is on, not what each part is set to, so those rows read INDIVIDUAL.
 - **Bottom:** the clock, range and outside temperature, with BMW's own gear letter.
 - **With the Waze map:** the blades keep their shape and numbers and move out to the sides, the map fills the middle between them, and the gear, speed and drive mode sit in a row under it.
@@ -47,7 +47,7 @@ Pixel art at night: a cherry tree arching over the top of the cluster, Mt. Fuji,
 
 <p align="center"><img src="../../docs/images/cluster-sakura.png" width="900" alt="Sakura theme"></p>
 
-Three more Sakura scenes share a slimmer layout: wide plates with the value on the right and the labels stacked on the left, the boost and G plates on the right, and the revs as a 28-segment bar over the middle (pink, white from 5,000 rpm, red from 6,000; every lit segment flashes white and red at the shift point), or the blossoms on the twig in Hanami Grove. Pick them on the Themes tab as **Sakura: Blue Hour Line** (an elevated train line at dusk, a tree and a railing), **Sakura: Moon Mirror** (a lone tree before a huge moon, its petals blowing left with the wind) and **Sakura: Hanami Grove** (two trees, fallen petals on the grass). Not yet tested on a car.
+Three more Sakura scenes share a slimmer layout: wide plates with the value on the right and the labels stacked on the left, the boost and G plates on the right, and the revs as a 28-segment bar over the middle (pink, white from 5,000 rpm, red from 6,000; every lit segment flashes white and red at the shift point), or the blossoms on the twig in Hanami Grove. Pick them on the Theme tab as **Sakura: Blue Hour Line** (an elevated train line at dusk, a tree and a railing), **Sakura: Moon Mirror** (a lone tree before a huge moon, its petals blowing left with the wind) and **Sakura: Hanami Grove** (two trees, fallen petals on the grass). Not yet tested on a car.
 
 <p align="center"><img src="../../docs/images/cluster-sakura-line.png" width="900" alt="Sakura: Blue Hour Line"></p>
 <p align="center"><img src="../../docs/images/cluster-sakura-moon.png" width="900" alt="Sakura: Moon Mirror"></p>
@@ -160,39 +160,43 @@ More themes are on the way.
 
 ## Off and drive modes
 
-- **Off (BMW's own cluster):** pick it as the theme and the app draws nothing, so BMW's cluster comes back.
-- **Change with SPORT / COMFORT / ECO PRO** (on by default): the cluster follows the drive mode buttons, with a theme for each mode. Out of the box, Sport shows Track, and Comfort and Eco Pro show BMW's own cluster. Until the car reports a mode, the plain theme setting is used.
-- **M cars:** the Efficient, Sport and Sport+ modes of M cars are not recognised yet, so the theme doesn't change with them. The last line of the Settings tab shows the value your car sends; please post it in an issue so it can be added.
+- **Off (BMW's own cluster):** pick it as the theme and the app draws nothing, so BMW's cluster comes back. **Show BMW's own cluster in every mode** (Theme tab) does that for every drive mode in one tap, with Undo for 10 seconds.
+- **A theme for each drive mode** (on by default): the cluster follows the drive mode buttons. On the Theme tab, pick the mode (1. Drive mode), then tap its theme (2.). Out of the box, Sport shows Track, and Comfort and Eco Pro show BMW's own cluster. **One theme for every mode** turns this off (it is **Change with SPORT / COMFORT / ECO PRO** in the kit's own All settings list). Until the car reports a mode, the theme for every mode is used.
+- **M cars:** the Efficient, Sport and Sport+ modes of M cars are not recognised yet, so the theme doesn't change with them. **Settings, Details for bug reports** shows the value your car sends; please post it in an issue so it can be added.
 - **With HUD Widgets:** on cluster-render 0.5.1 and newer, a cluster theme and a HUD layout show at the same time. On older cluster-render they share one screen slot and take turns: pick a theme while the HUD is on and the page asks whether to turn HUD Widgets off, and it asks the same the other way round.
 
 ## Settings
 
-- **Theme**, and one per drive mode.
-- **Readouts:** pick which car sensor each M, Track or Retro 80s readout shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more). Plug-in hybrids can also show **Hybrid battery**, the high-voltage battery's charge in % (not yet checked on a hybrid).
-- **Show Waze map inside the theme:** Sport and M open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
-- **Badge:** the model name, like "BMW X3 M40i", as text in the theme's font (Sport and M, where BMW puts its own). Off by default.
-- **Warnings:** oil, coolant and boost limits. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off).
-- **Test the shift lights:** runs the rpm up to the shift point for about 4 seconds while the car stands.
+The names below are the page's. The kit's own **All settings** list (the SETTINGS button at the top) keeps the shorter names from app.json.
+
+- **Theme:** one per drive mode, or **One theme for every mode**.
+- **Gauges:** pick which car value each box of M, Track or Retro 80s shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more). Plug-in hybrids can also show **Hybrid battery**, the high-voltage battery's charge in % (not yet checked on a hybrid). **Put Track's boxes back** (or M's, or Retro 80s') puts that theme's boxes back as they came; it asks first.
+- **Waze map, Show the Waze map in the theme:** Sport and M open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
+- **Model name:** your model, like "BMW X3 M40i", as text in the theme's font (Sport and M, where BMW puts its own): 1. the series, 2. your model, **Write "BMW" in front**, or **Show no model name** (the default).
+- **Warnings:** **Oil is hotter than**, **Coolant is hotter than** and **Boost is higher than**. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off). **Put warnings back** returns all three to these, with Undo.
+- **Test the shift lights** (Start test): runs the rpm up to the shift point for about 4 seconds while the car stands.
 - **Play demo:** the button at the top of the page plays a 60-second show on the cluster while the car stands (a pull through the gears with graded shifts, the limiter, braking, corners, boost, the oil warning once), with a DEMO tag. It stops at the end, on Stop, or as soon as the car moves, and nothing from it is kept.
-- **Shift lights:** Count in (the default) fills the lights over about the last second before the shift point and flashes early by your reaction time; Fixed rpm band works as before. Ported from Redline (MIT).
-- **Temperatures only when they matter** (off by default): oil and coolant turn blue while cold, yellow while warming, red over their limit; the outside temperature turns blue at 3°C (37°F) and under.
-- **Night colours:** after sunset the theme's whites and greys dim to 60% (Auto, the default), or Off.
+- **Shift lights, How they light up:** **Timed** (the default; Count in in the kit's list) fills the lights over about the last second before the shift point and flashes early by your reaction time; **Fixed** (Fixed rpm band) works as before. Ported from Redline (MIT).
+- **Hide oil and coolant when they are normal** (off by default): oil and coolant turn blue while cold, yellow while warming, red over their limit; the outside temperature turns blue at 3°C (37°F) and under.
+- **Dim after sunset:** after sunset the theme's whites and greys dim to 60% (Auto, the default), or Off.
 - **Units:** mph, °F, psi or km/h, °C, bar.
 - **Clock:** 12-hour or 24-hour.
-- **Time zone (clock):** the head unit's clock runs on UTC, so pick your zone once. Named zones (US Eastern, Central, Mountain, Pacific, Alaska, Hawaii, Arizona, Canada Atlantic, Mexico, UK / Ireland / Portugal, Central Europe, Eastern Europe) change for daylight saving by themselves; for anywhere else, pick your offset from UTC. Night colours uses the same zone to work out sunset.
+- **Time zone:** the head unit's clock runs on UTC, so pick your zone once. Named zones (US Eastern, Central, Mountain, Pacific, Alaska, Hawaii, Arizona, Canada Atlantic, Mexico, UK / Ireland / Portugal, Central Europe, Eastern Europe) change for daylight saving by themselves; for anywhere else, pick your offset from UTC. Dim after sunset uses the same zone to work out sunset.
 - **Fuel tank size:** the fuel gauge asks the engine unit for the level in %. Where the engine unit doesn't answer, it works it out from the litres the car reports and this size (65 L on an X3, 59 L on a 3 Series).
 - **Redline:** where the red marks start on the rev scales (they always cover at least the last 500 rpm, and the yellow marks sit in the 700 rpm before them).
-- **Shift point before redline:** how far below the redline the shift lights peak (300 rpm by default).
-- **Cold-engine rev guard:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
-- **Show boost.**
-- **Leave room for the driver camera** (off by default): for newer cars with a driver attention camera in the top middle of the cluster, where other cars show the model badge. The rev bars (Track, Retro 80s) become two mirrored wings either side of the camera that fill from the outer ends in towards it and meet at the shift point, Track's rpm numbers are left out, M's logo is hidden, and Ribbon's ribbon dips under the camera instead. The camera's spot is taken from where the badge sits on a car without one. Not yet tested on a car with a camera; please report how it lines up on yours.
-- **Holiday editions:** a string of glowing holiday lights along the top of every theme, and Ribbon's own holiday edition. Auto (the default) puts them on by the date: Thanksgiving in its week (Monday to Sunday), Christmas from December 1 to 26, New Year from December 27 to January 2, and the Fourth of July from July 1 to 5, then takes them off again. Or pick one holiday to keep it on, or Off. The date follows the Time zone (clock) setting.
-- **G-meter** (its own tab): the range (0.8, 1.0, 1.2, 1.5 or 2.0 g at the edge; 1.2 by default), the trail (off, 1, 2 or 4 seconds), **Swap left / right** (if the dot goes the wrong way in a turn) and **Brake on top**, the best left, right, accelerating, braking and overall g of the drive with a Reset button, and a live copy of the meter. The g comes from the car's own acceleration sensor: parked on level ground it reads 0.00, and a hill adds a little.
-- **Demo data:** fake driving data for trying it out parked. It switches back to the car's own data as soon as the car moves faster than 5 km/h.
-- **Calibration grid:** a theme that draws lines every 50 px with labels, for checking on a photo where things land on the real screen. It also carries a few test marks used to measure cluster-render's limits on the car.
-- **Map calibration:** a theme that leaves BMW's whole map window open with a grid through it, for photographing exactly what shows through the map cut-out with a navigation map up.
+- **Shift lights peak:** how far below the redline the shift lights peak (300 rpm by default).
+- **Shift earlier while the engine is cold:** until the oil reaches 80°C, the shift point starts at 4500 rpm and climbs as the oil warms up.
+- **Show turbo boost.**
+- **Keep the top centre clear** (off by default): for newer cars with a driver attention camera in the top middle of the cluster, where other cars show the model badge. The rev bars (Track, Retro 80s) become two mirrored wings either side of the camera that fill from the outer ends in towards it and meet at the shift point, Track's rpm numbers are left out, M's logo is hidden, and Ribbon's ribbon dips under the camera instead. The camera's spot is taken from where the badge sits on a car without one. Not yet tested on a car with a camera; please report how it lines up on yours.
+- **Holiday decorations:** a string of glowing holiday lights along the top of every theme, and Ribbon's own holiday edition. Auto (the default) puts them on by the date: Thanksgiving in its week (Monday to Sunday), Christmas from December 1 to 26, New Year from December 27 to January 2, and the Fourth of July from July 1 to 5, then takes them off again. Or pick one holiday to keep it on, or Off. The date follows the Time zone setting.
+- **G-meter** (its own tab): **Circle edge** (0.8, 1.0, 1.2, 1.5 or 2.0 g; 1.2 by default), **Tail behind the dot** (off, 1, 2 or 4 seconds), **Flip left and right** (if the dot goes the wrong way in a turn) and **Show braking at the top**, **Most g this drive** (left and right turns, speeding up, braking, highest) with **Clear this drive's best g**, and a live copy of the meter. The g comes from the car's own acceleration sensor: parked on level ground it reads 0.00, and a hill adds a little.
+- **Fake data while parked:** fake driving data for trying it out parked. It switches back to the car's own data as soon as the car moves faster than 5 km/h.
+- **Details for bug reports** (Settings, Help and reset): the drive mode signals and what the app is doing (layers, picture memory, why nothing is drawn).
+- **Reset everything** (Settings, Help and reset): every setting and every gauge box back to how the app came. It asks first. Out of the box Sport shows Track; to see BMW's own cluster, use Show BMW's own cluster in every mode.
+- **Calibration grid** (in the All settings list): a theme that draws lines every 50 px with labels, for checking on a photo where things land on the real screen. It also carries a few test marks used to measure cluster-render's limits on the car.
+- **Map calibration** (in the All settings list): a theme that leaves BMW's whole map window open with a grid through it, for photographing exactly what shows through the map cut-out with a navigation map up.
 
-<p align="center"><img src="../../docs/images/page-cluster-settings.png" width="900" alt="The Settings tab with the time zone set to US Eastern"></p>
+<p align="center"><img src="../../docs/images/page-cluster-settings.png" width="900" alt="The Settings tab"></p>
 
 **Shift grades:** every upshift is graded on its peak rpm. EARLY means more than 250 rpm under the shift point, LATE more than 200 over it, COLD REV the same while the cold guard is on, LIMITER within 25 rpm of the redline, and anything in between is SPOT ON. Only shifts aimed at the shift point are graded: one more than 1500 rpm under it (an everyday shift) or one the gearbox made itself in D or S is left out, and the last grade stays on screen. When Redline 2.0.28 or newer is running, the shift point and the grade come from Redline, which learns a shift point for each gear.
 
@@ -210,7 +214,7 @@ Tested on a 2020 X3 M40i. Checked on the car: GT3 and Dyno (both retired in 0.21
 - the Hybrid battery readout on a plug-in hybrid;
 - Play demo, the count-in shift lights and the switch-off guard (0.16.0).
 
-If something looks wrong on your car, the last line of the Settings tab says what the app is doing and why anything is not drawn. Please open an issue with it.
+If something looks wrong on your car, **Settings, Details for bug reports** says what the app is doing and why anything is not drawn. Please open an issue with it.
 
 See [Use at your own risk](../../README.md#use-at-your-own-risk) before installing.
 
