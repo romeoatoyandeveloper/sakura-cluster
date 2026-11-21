@@ -302,6 +302,10 @@ THEMES.orbital = sceneTheme('Orbital', { fg: [238, 243, 255, 255], dim: [114, 13
 // the text in warm cream, lavender and lamp-light
 THEMES.family = sceneTheme('My Family', { fg: [255, 243, 223, 255], dim: [196, 182, 226, 255], sec: [255, 214, 160, 255] },
     [[11, 16, 48], [255, 184, 97], [255, 77, 64], [255, 236, 190]]);
+// My Family: Sakura (layout family_sakura.json): the family under cherry blossom by a lake at night (shaders.js
+// scene_hanami); the text in warm white, blossom pink and lantern gold
+THEMES.family_sakura = sceneTheme('My Family: Sakura', { fg: [255, 245, 240, 255], dim: [248, 184, 208, 255], sec: [255, 214, 160, 255] },
+    [[12, 12, 38], [255, 184, 102], [255, 66, 58], [255, 226, 236]]);
 // VFD (the canvas's T4 · VFD, an 80s vacuum-fluorescent dash) in its three phosphors at once: cyan in the middle (fg,
 // its labels dim, unlit ghost), amber on the left (amber, adim, aghost), green on the right (green, gdim, gghost); an unlit
 // label is its phosphor at 16 % as the shader's unlit segments; the warning red and the shift flash orange

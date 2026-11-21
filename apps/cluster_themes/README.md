@@ -77,6 +77,18 @@ The family is one picture (`tools/photo-src/family.png`, baked by `tools/bake_ph
 
 <p align="center"><img src="../../docs/images/cluster-family.png" width="900" alt="My Family theme"></p>
 
+### My Family: Sakura
+
+The family under cherry blossom by a lake at night, painted smooth to match their picture: a full moon, Mount Fuji with its snow in the moonlight, the far shore's trees and festival lights, a red five-storey pagoda, all mirrored in the lake with the moon's path glittering on it, cherry trees at both sides arching over the top in blossom, two stone lanterns alight beside the family on a stone bank strewn with fallen petals, and petals falling all the time.
+
+- **Revs:** paper lanterns hung from the branches in two strings, lit from their outer ends towards the family: warm, then red from your redline. At the shift point every lantern turns red and flashes.
+- **The wind** blows the petals harder and the lake ripples faster the faster you drive; parked, they drift down gently.
+- **Readouts** as My Family's.
+
+The same picture of the family as My Family; everything else is drawn by the GPU (`scene_hanami` in `shared/shaders.js`, laid out by `tools/gen_family.py`). Not yet tested on a car.
+
+<p align="center"><img src="../../docs/images/cluster-family-sakura.png" width="900" alt="My Family: Sakura theme"></p>
+
 ### Retro 80s
 
 An 80s digital dash: amber seven-segment digits with their unlit 8s showing faintly behind, for the gear and the speed. A segmented rev bar runs across the top, bar graphs show oil, water and fuel on the left, and boost and two readouts sit on the right. The clock, range and outside temperature along the bottom are seven-segment digits too.

@@ -192,7 +192,8 @@
  *             round an orbit over a planet's horizon), "vfd" VFD (an 80s vacuum-fluorescent dash in three phosphors: a
  *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text); "canal" My
  *             Family (a Dutch canal at blue hour in pixel art, fairy lights for the revs, with a picture: "art" the
- *             hud/art asset, "photo" [x, y] where it stands, 1:1). Colour roles
+ *             hud/art asset, "photo" [x, y] where it stands, 1:1), "hanami" My Family: Sakura (cherry blossom by a lake at
+ *             night, Mount Fuji and a pagoda, petals falling, paper lanterns for the revs, a picture as canal's). Colour roles
  *             "c1".."c4" (each shader's header says what they are), "keep" [x0, y0, x1, y1] see-through, "nightDim" (0.75)
  *             at night. Their numbers are text widgets.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
@@ -408,7 +409,7 @@ const PHOTO_STAR_RAD = 0.6;
 const PHOTO_HEART_S = 4;
 // Scene themes (widget type "scene", shaders.js scene_*): which of the scene inputs each scene's shader declares (u_a its
 // clocks, u_b its numbers, u_g the g), so only those are sent; u_drive, u_keep, u_c1..u_c4 and u_dim go to every scene
-const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg', canal: 'a' };
+const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg', canal: 'a', hanami: 'a' };
 const SCENE_SPEED = 200;              // km/h at u_drive.x = 1
             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
@@ -2819,6 +2820,8 @@ class HudApp {
      *   paper    u_b: the thousands on the rev scale
      *   trails   u_a: the traffic's clock (faster with the speed), the dashes' phase, seconds
      *   canal    u_a: the water's clock (faster with the speed), seconds, the shift point; its picture ("art", "photo") as u_art, u_photo
+     *   hanami   u_a: the water's clock, seconds, the shift point, the wind's clock (both faster with the speed); its
+     *            picture as canal's
      *   glass,   u_b: oil, coolant, fuel, boost as their bars' fills; u_g: the G dot (g, screen directions; the VFD's
      *   orbital, the load the driver feels), coolant over its limit, the shift point; u_a: seconds (the VFD: oil over its
      *   vfd      limit)
@@ -2858,6 +2861,12 @@ class HudApp {
             // the canal's ripples and the reflections' wobble, faster with the speed
             x.water = ((x.water || 0) + dt * (0.5 + 2.5 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
             send('u_a', [Math.round(x.water * 100) / 100, r2(sec), this._shift().now ? 1 : 0, 0]);
+        } else if (s === 'hanami') {
+            // the lake's ripples, and the wind that blows the petals (gently when parked, a gust at speed)
+            const f = Math.min(1, kmh / SCENE_SPEED);
+            x.water = ((x.water || 0) + dt * (0.5 + 2.5 * f)) % 1000;
+            x.wind = ((x.wind || 0) + dt * (0.6 + 7.0 * f)) % 1000;
+            send('u_a', [Math.round(x.water * 100) / 100, r2(sec), this._shift().now ? 1 : 0, Math.round(x.wind * 100) / 100]);
         } else if (s === 'trails') {
             x.traffic = ((x.traffic || 0) + dt * (0.04 + 1.5 * Math.min(1, kmh / SCENE_SPEED))) % 500;
             send('u_a', [Math.round(x.traffic * 1000) / 1000, r2((D / 9) % 1), r2(sec), 0]);

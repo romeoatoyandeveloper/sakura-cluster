@@ -8,7 +8,7 @@
 
 <img src="apps/cluster_themes/icon.png" width="72" align="left" alt="Cluster Themes icon">
 
-Redraws the whole instrument cluster in a theme of your choice: an M-style cluster, a Sport view, a Track race dash, Retro 80s, Cruise, Ribbon with holiday editions, pixel-art Sakura scenes, My Boy (a photo of a little one), and moving scenes: Night Drive, Warp, Paper, Light Trails, Aurora, Orbital and VFD, an 80s vacuum-fluorescent dash. Pick the theme on the center screen, or let it follow the SPORT / COMFORT / ECO PRO buttons. [Read more](apps/cluster_themes/README.md)
+Redraws the whole instrument cluster in a theme of your choice: an M-style cluster, a Sport view, a Track race dash, Retro 80s, Cruise, Ribbon with holiday editions, pixel-art Sakura scenes, My Boy (a photo of a little one), My Family (the family on a canal quay at blue hour, or under cherry blossom by a lake at night), and moving scenes: Night Drive, Warp, Paper, Light Trails, Aurora, Orbital and VFD, an 80s vacuum-fluorescent dash. Pick the theme on the center screen, or let it follow the SPORT / COMFORT / ECO PRO buttons. [Read more](apps/cluster_themes/README.md)
 
 <p align="center"><img src="docs/images/cluster-m.png" width="900" alt="M theme"></p>
 <p align="center"><img src="docs/images/cluster-sport.png" width="900" alt="Sport theme"></p>

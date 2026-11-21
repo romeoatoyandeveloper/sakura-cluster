@@ -2706,6 +2706,188 @@ void main() {
 }
 `;
 
+// My Family: Sakura: hanami by a lake at night, painted smooth (1 panel px a pixel): an indigo sky warming to rose at the
+// horizon, stars, a full moon, Mount Fuji with its snow in the moonlight, the far shore's trees and festival lights, a
+// five-storey pagoda, all mirrored in the lake (rippling faster with the speed, the moon's path on it), a stone bank with
+// fallen petals, two stone lanterns alight beside the family, cherry trees at both sides arching over the top in
+// blossom, petals falling and blowing faster with the speed, and paper lanterns hung from the branches that light with
+// the revs (warm, red from the redline, all flashing red at the shift point). The family (u_art, at u_photo) in front.
+// u_a: x the water's clock, y seconds, z the shift point, w the wind's clock.
+const SCENE_HANAMI = SCENE_HEAD + `uniform vec4 u_a;
+uniform sampler2D u_art;
+uniform vec4 u_photo;
+const float HZ = 432.0;
+float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)); }
+float vnoise(vec2 x) {
+    vec2 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+vec3 skyAt(float y) {
+    float t = clamp(y / HZ, 0.0, 1.0);
+    vec3 c = mix(vec3(0.04, 0.05, 0.15), vec3(0.13, 0.10, 0.29), smoothstep(0.0, 0.5, t));
+    c = mix(c, vec3(0.40, 0.23, 0.43), smoothstep(0.45, 0.86, t));
+    return mix(c, vec3(0.84, 0.50, 0.52), smoothstep(0.84, 1.0, t));
+}
+// what lies across the lake, seen or mirrored in it
+vec3 far(vec2 q) {
+    vec3 c = skyAt(q.y);
+    float st = hash(floor(q / 6.0) + 17.0);
+    if (st > 0.985 && length(fract(q / 6.0) - 0.5) < 0.26) c += vec3(0.6, 0.6, 0.7) * clamp(1.0 - q.y / 300.0, 0.0, 1.0);
+    // the moon
+    vec2 mo = q - vec2(600.0, 122.0);
+    float md = length(mo);
+    c += vec3(0.75, 0.62, 0.82) * 0.30 * exp(-max(md - 38.0, 0.0) / 70.0);
+    float mm = max(smoothstep(13.0, 9.0, length(mo - vec2(-9.0, -7.0))), smoothstep(10.0, 6.0, length(mo - vec2(13.0, 9.0))));
+    c = mix(c, mix(vec3(1.0, 0.97, 0.90), vec3(0.87, 0.84, 0.82), mm * 0.8), smoothstep(38.5, 37.0, md));
+    // Mount Fuji: its moonlit left flank, ridges running down, the snow with its fingers, haze at its foot
+    float t = (q.y - 214.0) / (HZ - 214.0);
+    if (t > 0.0) {
+        float dx = q.x - 640.0, e = 24.0 + 520.0 * pow(t, 1.65) - abs(dx);
+        if (e > -1.0) {
+            vec3 m = mix(vec3(0.17, 0.16, 0.34), vec3(0.10, 0.09, 0.23), smoothstep(-30.0, 40.0, dx)) * (0.92 + 0.08 * sin(dx / (2.5 + 14.0 * t)));
+            if (t < 0.30 + 0.035 * sin(dx * 0.07) + 0.025 * sin(dx * 0.19 + 1.0) + 0.14 * pow(max(0.0, sin(dx * 0.11 + 0.5)), 2.0) * (0.25 + 0.75 * abs(sin(dx * 0.037 + 2.0))))
+                m = mix(vec3(0.88, 0.90, 0.99), vec3(0.50, 0.54, 0.78), smoothstep(-40.0, 30.0, dx)) * (0.95 + 0.05 * sin(dx / (2.0 + 10.0 * t)));
+            c = mix(c, mix(m, skyAt(HZ - 8.0), smoothstep(0.3, 1.0, t) * 0.55), clamp(e + 0.5, 0.0, 1.0));
+        }
+    }
+    // the far shore: trees in blossom catching the last light, festival lights among them
+    float th = HZ - 8.0 - 6.0 * (1.0 + sin(q.x * 0.021)) - 4.0 * (1.0 + sin(q.x * 0.077 + 1.0)) - 2.5 * (1.0 + sin(q.x * 0.21));
+    if (q.y > th - 1.0) {
+        c = mix(c, mix(vec3(0.46, 0.26, 0.42), vec3(0.16, 0.10, 0.21), smoothstep(0.0, 9.0, q.y - th)), clamp(q.y - th + 0.5, 0.0, 1.0));
+        float lx = floor(q.x / 34.0);
+        if (hash(vec2(lx, 8.0)) > 0.55) c = mix(c, vec3(1.0, 0.78, 0.50), smoothstep(2.2, 1.2, length(vec2(q.x - (lx + 0.5) * 34.0, q.y - HZ + 5.0))));
+    }
+    // the pagoda: five storeys, vermilion posts, dark roofs with their eaves turned up and lit from below, the spire
+    vec2 g = q - vec2(1292.0, HZ - 6.0);
+    if (abs(g.x) < 66.0 && g.y < 0.0 && g.y > -252.0) {
+        // storey i (0 at the bottom) is a 30 - 3i px body under a 14 px roof, so it starts 45.5i - 1.5i^2 px up: which
+        // one is here, at once
+        float y = -g.y, dx = abs(g.x), hit = 0.0, fi = floor((45.5 - sqrt(max(0.0, 2070.25 - 6.0 * y))) / 3.0);
+        vec3 pc = vec3(0.10, 0.08, 0.13);
+        if (y < 190.0) {
+            float bw = 30.0 - 3.2 * fi, rw = 64.0 - 6.5 * fi, yr = -(45.5 * fi - 1.5 * fi * fi) - 30.0 + 3.0 * fi;
+            if (g.y > yr && dx < bw) {
+                hit = 1.0;
+                pc = mix(vec3(0.62, 0.17, 0.13), vec3(0.30, 0.08, 0.09), smoothstep(-bw, bw, g.x)) * (fract(g.x / 8.0) < 0.2 ? 0.6 : 1.0);
+            }
+            float lo = yr + 3.0 - 9.0 * pow(min(dx / rw, 1.0), 3.0);
+            if (g.y < lo && dx < mix(rw, bw * 0.75, pow((lo - g.y) / (lo - yr + 14.0), 0.7))) { hit = 1.0; pc = g.y > lo - 2.0 ? vec3(0.86, 0.48, 0.32) : vec3(0.09, 0.07, 0.13); }
+        } else if ((y < 244.0 && dx < (mod(g.y, 6.0) < 2.0 && y < 230.0 ? 5.0 : 1.6)) || length(vec2(g.x, y - 247.0)) < 3.5) hit = 1.0;   // the spire, its rings, the finial
+        c = mix(c, mix(pc, skyAt(HZ - 8.0), 0.12), hit);
+    }
+    return c;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    float shore = 606.0 + 8.0 * sin(p.x * 0.0041 + 0.8) - 5.0 * sin(p.x * 0.011);
+    // the lake mirrors all that lies across it, wobbling with the ripples (one pass of far() for the sky and the lake)
+    float dw = p.y - HZ, wt = u_a.x;
+    bool lake = dw >= 0.0 && p.y < shore;
+    float wob = (0.5 + dw * 0.025) * sin(p.y * 0.45 + wt * 2.0106) + (0.4 + dw * 0.02) * sin(p.y * 0.12 - wt * 1.2566 + p.x * 0.006);
+    vec3 c = far(lake ? vec2(p.x + wob, HZ - dw) : p);
+    if (lake) {
+        // darker nearer, ripples, the moon's path glittering on it
+        c = mix(c * 0.66, vec3(0.05, 0.05, 0.15), 0.2 + 0.4 * dw / 175.0);
+        float rl = vnoise(vec2(p.x / (30.0 + dw * 1.5), p.y / (1.5 + dw * 0.03) - wt * 0.7));
+        c *= 0.74 + 0.5 * rl;
+        float gw = 16.0 + dw * 0.42;
+        c += vec3(1.0, 0.92, 0.86) * 0.6 * smoothstep(gw, gw * 0.3, abs(p.x - 600.0 + wob * 1.5)) * smoothstep(0.55, 0.78, rl) * (1.0 - 0.9 * smoothstep(50.0, 120.0, dw));
+        c = mix(c, vec3(0.04, 0.04, 0.10), smoothstep(shore - 16.0, shore, p.y) * 0.5);
+    } else if (dw >= 0.0) {
+        // the near bank: stones along the water, moss, fallen petals, the family's shadow
+        float d = p.y - shore, sx = floor(p.x / 28.0);
+        c = mix(vec3(0.13, 0.12, 0.19), vec3(0.06, 0.06, 0.10), smoothstep(0.0, 110.0, d));
+        float h = hash(floor(p / 11.0) + 41.0), an = h * 40.0;
+        vec2 pf = fract(p / 11.0) - 0.5 - (fract(h * vec2(7.3, 9.1)) - 0.5) * 0.3;
+        vec2 cs = vec2(cos(an), sin(an));
+        if (h > 0.8 && length(vec2(dot(pf, cs), cs.x * pf.y - cs.y * pf.x) / vec2(0.3, 0.17)) < 1.0)
+            c = mix(c, vec3(0.88, 0.60, 0.72), 0.7 - 0.3 * smoothstep(0.0, 110.0, d));
+        vec2 so = vec2((fract(p.x / 28.0) - 0.5) * 28.0, d - 6.0 - 2.0 * hash(vec2(sx, 3.0)));
+        if (length(so / vec2(12.5, 6.5)) < 1.0) c = mix(vec3(0.34, 0.32, 0.42), vec3(0.15, 0.14, 0.21), smoothstep(-6.0, 5.0, so.y)) * (0.9 + 0.2 * hash(vec2(sx, 5.0)));
+        c *= 1.0 - 0.55 * (1.0 - smoothstep(0.5, 1.0, length((p - vec2(960.0, 652.0)) / vec2(175.0, 13.0))));
+    }
+    // two stone lanterns on the bank beside the family (one, mirrored), alight
+    {
+        vec2 o = vec2(abs(p.x - 960.0) - 228.0, p.y - 648.0) / 1.25;
+        float ax = abs(o.x), gl = exp(-length(o + vec2(0.0, 66.0)) / 46.0), s = 0.0;
+        if (o.y < 0.0 && o.y > -10.0 && ax < 20.0) s = 1.0;
+        else if (o.y < -10.0 && o.y > -46.0 && ax < 6.0) s = 1.0;
+        else if (o.y < -46.0 && o.y > -54.0 && ax < 18.0) s = 1.0;
+        else if (o.y < -54.0 && o.y > -78.0 && ax < 13.0) s = ax < 8.0 && o.y < -58.0 && o.y > -74.0 ? 2.0 : 1.0;
+        else if (o.y < -78.0 && o.y > -92.0 && ax < 28.0 - 22.0 * (-78.0 - o.y) / 14.0 + 3.0 * smoothstep(18.0, 28.0, ax) * step(o.y, -80.0)) s = 1.0;
+        else if (length(o + vec2(0.0, 97.0)) < 5.0) s = 1.0;
+        if (s > 1.5) c = vec3(1.0, 0.82, 0.52);
+        else if (s > 0.5) c = mix(vec3(0.42, 0.40, 0.47), vec3(0.17, 0.16, 0.22), smoothstep(-14.0, 14.0, o.x)) * (0.88 + 0.2 * hash(floor(p / 3.0)));
+        c += vec3(1.0, 0.60, 0.30) * 0.32 * gl;
+    }
+    // the cherry trees, one at each side: the trunk, the branches arching over the top, the blossom on them
+    vec2 t = vec2(p.x < 960.0 ? p.x : 1920.0 - p.x, p.y);
+    if (t.x < 860.0) {
+        float tr = min(min(seg(t, vec2(34.0, 740.0), vec2(50.0, 430.0)) - 19.0, seg(t, vec2(50.0, 430.0), vec2(76.0, 260.0)) - 16.0), seg(t, vec2(76.0, 260.0), vec2(105.0, 175.0)) - 12.0);
+        float br = min(min(seg(t, vec2(105.0, 175.0), vec2(330.0, 104.0)) - 7.0, seg(t, vec2(330.0, 104.0), vec2(560.0, 62.0)) - 5.0), seg(t, vec2(560.0, 62.0), vec2(805.0, 96.0)) - 3.0);
+        float wd = min(tr, br);
+        if (wd < 1.0) {
+            vec3 bark = mix(vec3(0.36, 0.22, 0.22), vec3(0.10, 0.07, 0.10), smoothstep(-8.0, 6.0, t.x - 60.0));
+            if (fract(p.y / 7.0 + 0.3 * sin(p.x * 0.2)) < 0.16) bark *= 0.65;
+            c = mix(c, tr < br ? bark : vec3(0.12, 0.08, 0.11), clamp(1.0 - wd, 0.0, 1.0));
+        }
+        float db = br + 4.0, n = vnoise(p / 30.0) * 0.7 + vnoise(p / 10.0) * 0.3;
+        float R = mix(48.0, 22.0, clamp(t.x / 800.0, 0.0, 1.0)) * (0.2 + 1.4 * n) * (1.0 + 0.35 * max(0.0, sin(t.x * 0.031 + 1.0)));
+        float al = smoothstep(0.0, 1.5, R - db) * smoothstep(176.0, 166.0, t.y);
+        if (al > 0.0) {
+            float k = clamp((R - db) / 16.0, 0.0, 1.0), lt = clamp(0.55 + 3.5 * (n - vnoise((p - vec2(6.0, 8.0)) / 30.0)), 0.0, 1.0);
+            vec3 bc = mix(vec3(0.46, 0.24, 0.43), mix(vec3(0.86, 0.52, 0.68), vec3(1.0, 0.84, 0.90), lt), 0.35 + 0.65 * k);
+            bc += vec3(0.18, 0.07, 0.02) * smoothstep(0.0, 30.0, t.y - 104.0 + (t.x - 330.0) * 0.12) * k;
+            c = mix(c, bc, al);
+        }
+    }
+    // petals falling, two layers (far, near), blown faster with the speed; their pattern repeats every 64 cells and the
+    // clocks' rates fit it, so the clocks' wraps don't show
+    for (int i = 0; i < 2; i++) {
+        float fi = float(i), C = 44.0 + 22.0 * fi;
+        vec2 q = p + vec2(u_a.w * (14.08 + 7.04 * fi), -u_a.y * (14.08 + 14.08 * fi)), cl = floor(q / C), f = q - (cl + 0.5) * C;
+        cl = mod(cl, 64.0);
+        float h = hash(cl + fi * 31.0), h2 = fract(h * 13.7);
+        if (h > 0.45 + 0.08 * fi) {
+            vec2 r = f - (vec2(h2, fract(h * 7.3)) - 0.5) * C * 0.5;
+            float an = u_a.y * (1.2566 + 0.6283 * fi) + h * 20.0, L = 3.0 + 2.6 * fi;
+            vec2 cs = vec2(cos(an), sin(an));
+            r = vec2(dot(r, cs), cs.x * r.y - cs.y * r.x);
+            float pd = length(r / vec2(L, L * (0.25 + 0.4 * abs(sin(u_a.y * 2.0944 + h2 * 20.0)))));
+            c = mix(c, mix(vec3(1.0, 0.88, 0.93), vec3(0.92, 0.56, 0.71), smoothstep(-L, L, r.x)), smoothstep(1.0, 0.7, pd) * (0.65 + 0.3 * fi));
+        }
+    }
+    // the paper lanterns: the left string from x 330 to 800, the right one its mirror, sagging 52 px from y 112
+    vec2 q = vec2(p.x < 960.0 ? p.x : 1920.0 - p.x, p.y);
+    if (q.x > 300.0 && q.x < 830.0 && q.y > 95.0 && q.y < 240.0) {
+        float uu = (q.x - 330.0) / 470.0, s2 = 2.0 * uu - 1.0;
+        if (uu >= 0.0 && uu <= 1.0) c = mix(c, vec3(0.08, 0.06, 0.10), smoothstep(1.6, 0.6, abs(q.y - 112.0 - 52.0 * (1.0 - s2 * s2))));
+        float kk = clamp(floor(uu * 11.0 + 0.5), 0.0, 11.0), bu = 2.0 * kk / 11.0 - 1.0;
+        vec2 o = q - vec2(330.0 + kk / 11.0 * 470.0 + 2.0 * sin(u_a.y * 2.0944 + kk), 134.0 + 52.0 * (1.0 - bu * bu));
+        bool lit = kk < floor(u_drive.y * 12.0 + 0.5) - 0.5;
+        vec3 lc = (kk + 0.5) / 12.0 >= u_drive.w ? vec3(1.0, 0.26, 0.22) : vec3(1.0, 0.72, 0.40);
+        if (u_a.z > 0.5) { lit = true; lc = u_drive.z > 0.5 ? vec3(1.0, 0.28, 0.24) : vec3(0.50, 0.08, 0.08); }
+        if (lit) c += lc * 0.45 * smoothstep(26.0, 10.0, length(o));
+        float e = length(o / vec2(10.5, 13.0));
+        if (abs(o.x) < 1.0 && o.y < -13.0 && o.y > -23.0) c = vec3(0.08, 0.06, 0.10);
+        if (abs(o.x) < 6.0 && abs(abs(o.y) - 14.0) < 2.5) c = vec3(0.10, 0.07, 0.10);
+        else if (e < 1.0) {
+            vec3 b = lit ? mix(lc, vec3(1.0, 0.95, 0.86), (1.0 - e) * 0.6) : vec3(0.38, 0.20, 0.25) * (1.0 - 0.3 * e);
+            c = mix(c, b * (mod(o.y + 13.0, 4.0) < 1.0 ? 0.8 : 1.0), smoothstep(1.0, 0.9, e));
+        }
+    }
+    // the family, 1:1
+    vec2 f = p - u_photo.xy;
+    if (f.x >= 0.0 && f.y >= 0.0 && f.x < u_photo.z && f.y < u_photo.w) {
+        vec4 a = texture2D(u_art, (floor(f) + 0.5) / u_photo.zw);
+        c = mix(c, a.rgb, a.a);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
 module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA, photo: PHOTO,
     scene_synth: SCENE_SYNTH, scene_warp: SCENE_WARP, scene_paper: SCENE_PAPER, scene_trails: SCENE_TRAILS,
-    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL, scene_vfd: SCENE_VFD, scene_canal: SCENE_CANAL };
+    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL, scene_vfd: SCENE_VFD, scene_canal: SCENE_CANAL, scene_hanami: SCENE_HANAMI };

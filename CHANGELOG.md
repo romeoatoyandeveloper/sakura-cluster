@@ -4,6 +4,10 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 21 2026
 
+- **Cluster Themes 0.21.3, HUD Widgets 0.15.4:**
+  - **New theme: My Family: Sakura,** the family under cherry blossom by a lake at night, painted smooth: a full moon, Mount Fuji with its snow in the moonlight and a red five-storey pagoda across the water, all mirrored in the lake, cherry trees arching over the top in blossom, two stone lanterns alight beside the family on a stone bank strewn with petals, and petals falling all the time. The revs are paper lanterns hung from the branches, lighting warm from their outer ends towards the family, red from the redline, all flashing red at the shift point. The faster you drive, the harder the wind blows the petals and the faster the lake ripples. The readouts are as My Family's; the same picture of the family, three layers in all.
+  - HUD Widgets: no change you will see.
+  - Not yet tested on a car.
 - **Cluster Themes 0.21.2, HUD Widgets 0.15.3:**
   - **New theme: My Family,** the family in the middle of the cluster on a cobbled canal quay at blue hour, in pixel art: gabled canal houses with lit windows and a church tower, their reflections in the water, stars and a crescent moon, bikes and red bollards, and two old street lamps either side of them. The revs are two strings of fairy lights across the top that light from their outer ends towards the family (warm white, amber, red from the redline) and all pulse red at the shift point; the water ripples faster the faster you drive. The readouts are as My Boy's. The family is one uploaded picture (1.4 MiB of the cluster's 16 MiB pixel memory), the rest is drawn by the GPU, three layers in all.
   - HUD Widgets: no change you will see.
