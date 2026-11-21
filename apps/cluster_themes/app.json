@@ -2,7 +2,7 @@
   "id": "cluster_themes",
   "title": "Cluster Themes",
   "description": "Redraws the instrument cluster: Track race dash, M-style, Sport, Retro 80s, Cruise, Ribbon (with holiday editions), Sakura, My Boy (a photo of a little one), My Family (the family on a Dutch canal quay at blue hour), My Family: Sakura (the family under cherry blossom by a lake at night), and moving scenes (Night Drive, Neon Highway, Warp, Paper, Light Trails, Aurora, Orbital, VFD), with shift lights, boost, temps, tyres, a G-meter and a 0-60 timer",
-  "version": "0.21.4",
+  "version": "0.22.2",
   "vendor": "custom",
   "loggingId": "OAC1",
   "iconGlyph": "CLU",

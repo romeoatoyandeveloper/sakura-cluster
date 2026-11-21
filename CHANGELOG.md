@@ -4,10 +4,24 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 21 2026
 
-- **Cluster Themes 0.21.4, HUD Widgets 0.15.5:**
+- **Cluster Themes 0.22.2, HUD Widgets 0.16.2:**
   - **New theme: Neon Highway.** You drive down a neon highway into a striped synthwave sun, with rows of low-poly neon palms on both sides, a grid floor, mountains, a ringed planet and stars. The lane lines, the grid and the palms come at you with your speed, faster than real and more so the faster you go; at a standstill the road stands still. From about 30 km/h it builds up: the lane lines stretch into streaks, the grid blurs, light pulses shoot down the grid and the road's edges, and from about 50 km/h streaks of light fly out of the horizon, the grid turns purple and the edges of the view darken, all at full strength from about 150 km/h. The revs light the road's two edges from the bottom of the cluster towards the sun (cyan, magenta, red from the redline), and both flash at the shift point. The speed, gear, clock and outside temperature are as Night Drive's. One shader, no pictures.
   - HUD Widgets: no change you will see.
   - Not yet tested on a car.
+- **Cluster Themes 0.22.1, HUD Widgets 0.16.1:**
+  - **Fixed: in 0.22.0 a tap on a theme could change nothing on the cluster.** While the car hasn't reported a drive mode, the cluster shows the plain theme, but the new Theme tab started on Sport, so a tap set Sport's theme instead. The Theme tab now has a fourth choice, **Default** (what shows until the car reports a drive mode), and starts on whichever is in use now: a tap changes what the cluster shows, as before 0.22.0. Comfort, Sport and Eco Pro can still be set ahead.
+  - **Details for bug reports** says how to see the drive mode signals when they are hidden (they show only while the theme changes with the drive mode).
+  - Every tap on the page now checked against 0.21.3's page: in every car state, each button sets the same settings as it did there.
+  - Not yet tested on a car.
+- **Cluster Themes 0.22.0, HUD Widgets 0.16.0: a new look for the page on the center screen, and every button says what it does.**
+  - **Plain and quiet:** near-black, white text, one font, and colour only for status (green when the theme is on, amber for fake data, red only on Reset everything). The tabs run along the top as words. The kit's own All settings list and the controller's focus ring are grey to match.
+  - **Clearer words everywhere:** Readouts is now **Gauges**, Badge **Model name**, Map **Waze map** and Alerts **Warnings & shift lights**. Every setting has a plain name and a grey line under it saying what it does: Cold-engine rev guard is **Shift earlier while the engine is cold**, Count in and Fixed rpm band are **Timed** and **Fixed**, Temperatures only when they matter is **Hide oil and coolant when they are normal**, Leave room for the driver camera is **Keep the top centre clear**, the G-meter's Range is **Circle edge**, and so on. A list of choices says what each choice means. The kit's own All settings list keeps the old names.
+  - **Cluster Themes, Theme tab:** 1. pick the drive mode, 2. tap the theme it shows, from one grid of all 21 with their pictures. The four Sakura themes and My Boy have pictures now (they showed only their names), and the names no longer run into each other. **One theme for every mode** is the old Change with the drive mode, turned round.
+  - **New buttons:** **Show BMW's own cluster in every mode** (Theme tab, with Undo for 10 seconds), **Reset everything** (Settings: every setting and gauge box back to how the app came; it asks first), and **Put warnings back** (with Undo). **Put Track's boxes back** (Reset slots) now asks first.
+  - **Details for bug reports:** the drive mode check and the status line are now behind a button on Settings.
+  - A long list (HUD Widgets' layouts) splits into columns instead of running off the screen.
+  - Nothing else changed: every button sets the same setting, or calls the same part of the app, as before, and the reset buttons only put settings back to their defaults.
+  - Tested in the emulator and on the bench (Node 8.16.2, the car's): every tab of both apps in nine car states, every button on each (about 4,000 taps), the main flows checked setting by setting. Not yet tested on a car.
 - **Cluster Themes 0.21.3, HUD Widgets 0.15.4:**
   - **New theme: My Family: Sakura,** the family under cherry blossom by a lake at night, painted smooth: a full moon, Mount Fuji with its snow in the moonlight and a red five-storey pagoda across the water, all mirrored in the lake, cherry trees arching over the top in blossom, two stone lanterns alight beside the family on a stone bank strewn with petals, and petals falling all the time. The revs are paper lanterns hung from the branches, lighting warm from their outer ends towards the family, red from the redline, all flashing red at the shift point. The faster you drive, the harder the wind blows the petals and the faster the lake ripples. The readouts are as My Family's; the same picture of the family, three layers in all.
   - HUD Widgets: no change you will see.
