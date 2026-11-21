@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 21 2026
 
+- **Cluster Themes 0.22.2, HUD Widgets 0.16.2: plug-in hybrids switch with the drive mode.** A plug-in hybrid sends its drive mode by name with PHEV_ in front (PHEV_SPORT_STANDARD, seen on a G01 X3 plug-in hybrid), which the apps didn't recognise, so the cluster and the HUD stayed on the Default theme or layout whatever mode was picked. The PHEV_ is now left off before the name is read, so Sport, Comfort and Eco Pro (and their Plus and Individual variants) pick their own theme or layout. Checked on the bench with the car's value; not yet tested on the car. Any other value is still shown in Settings, Details for bug reports.
 - **Cluster Themes 0.22.1, HUD Widgets 0.16.1:**
   - **Fixed: in 0.22.0 a tap on a theme could change nothing on the cluster.** While the car hasn't reported a drive mode, the cluster shows the plain theme, but the new Theme tab started on Sport, so a tap set Sport's theme instead. The Theme tab now has a fourth choice, **Default** (what shows until the car reports a drive mode), and starts on whichever is in use now: a tap changes what the cluster shows, as before 0.22.0. Comfort, Sport and Eco Pro can still be set ahead.
   - **Details for bug reports** says how to see the drive mode signals when they are hidden (they show only while the theme changes with the drive mode).
