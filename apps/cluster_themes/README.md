@@ -122,6 +122,7 @@ Driving down a neon highway into a striped synthwave sun, between rows of low-po
 
 - **Speed:** from about 30 km/h the lane lines stretch into streaks, the grid blurs and light pulses shoot down the grid and along the road's edges. From about 50 km/h streaks of light fly out of the horizon, the grid turns purple, the sun's glow swells and the edges of the view darken. All of it is at full strength from about 150 km/h and calms down again as you slow.
 - **Revs:** the road's two edges light up from the bottom of the cluster towards the sun: cyan, then magenta, then red from your redline. At the shift point both flash.
+- **The road follows your drive:** it bends the way you turn, as hard as you corner (half a g sideways is a full bend), the view banks into it and the sun and mountains swing with it. With a route running it starts curving towards your next turn from about 400 m before it (directions as HUD Widgets reads them: seen with CarPlay and Apple Maps; Waze sends no turns). Braking hard runs the scene red with a flash as you hit the brakes; flooring it makes the sun flare. If it bends the wrong way, the G-meter tab's swap setting turns it round.
 - **Readouts** as Night Drive's: the speed left of the sun, the gear right of it, in chrome figures, the clock and outside temperature above them.
 
 <p align="center"><img src="../../docs/images/cluster-highway.png" width="900" alt="Neon Highway theme"></p>
