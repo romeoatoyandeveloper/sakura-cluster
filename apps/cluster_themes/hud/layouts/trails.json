@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 2,
+  "name": "Light Trails",
+  "packWaste": 3,
+  "theme": "trails",
+  "widgets": [
+    {
+      "id": "scene",
+      "type": "scene",
+      "scene": "trails",
+      "class": "content",
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "keep": [
+        1380,
+        660,
+        1460,
+        720
+      ]
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 120,
+      "y": 193,
+      "w": 440,
+      "h": 115,
+      "text": "{{speed}}",
+      "font": "s_hero",
+      "color": "fg",
+      "align": "right"
+    },
+    {
+      "id": "speed_u",
+      "type": "text",
+      "z": 5,
+      "x": 120,
+      "y": 324,
+      "w": 440,
+      "h": 29,
+      "text": "{{u:speedLc}}",
+      "font": "s_unit",
+      "color": "dim",
+      "align": "right"
+    },
+    {
+      "id": "clock",
+      "type": "text",
+      "z": 5,
+      "x": 120,
+      "y": 377,
+      "w": 440,
+      "h": 29,
+      "text": "{{time}}",
+      "font": "m_mid",
+      "color": "sec",
+      "align": "right"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1360,
+      "y": 242,
+      "w": 440,
+      "h": 65,
+      "text": "{{gear}}",
+      "font": "s_gear",
+      "color": "fg"
+    },
+    {
+      "id": "mode",
+      "type": "text",
+      "z": 5,
+      "x": 1360,
+      "y": 322,
+      "w": 440,
+      "h": 29,
+      "text": "{{mode}}",
+      "font": "s_label",
+      "color": "dim"
+    },
+    {
+      "id": "out",
+      "type": "text",
+      "z": 5,
+      "x": 1360,
+      "y": 382,
+      "w": 440,
+      "h": 29,
+      "text": "{{ambientN}}{{u:temp}} outside",
+      "font": "s_unit",
+      "color": "sec"
+    }
+  ]
+}

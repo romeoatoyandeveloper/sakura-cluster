@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 2,
+  "name": "Rainy Window",
+  "packWaste": 3,
+  "theme": "rain",
+  "widgets": [
+    {
+      "id": "scene",
+      "type": "scene",
+      "scene": "rain",
+      "class": "content",
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "keep": [
+        1380,
+        660,
+        1460,
+        720
+      ]
+    },
+    {
+      "id": "speed_lab",
+      "type": "text",
+      "z": 5,
+      "x": 48,
+      "y": 227,
+      "w": 160,
+      "h": 23,
+      "text": "SPEED",
+      "font": "sk_lab",
+      "color": "dim"
+    },
+    {
+      "id": "speed_u",
+      "type": "text",
+      "z": 5,
+      "x": 220,
+      "y": 227,
+      "w": 160,
+      "h": 23,
+      "text": "{{u:speed}}",
+      "font": "sk_lab",
+      "color": "dim",
+      "align": "right"
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 48,
+      "y": 256,
+      "w": 332,
+      "h": 100,
+      "text": "{{speed}}",
+      "font": "sk_speed96",
+      "color": "fg",
+      "align": "right"
+    },
+    {
+      "id": "clock",
+      "type": "text",
+      "z": 5,
+      "x": 48,
+      "y": 366,
+      "w": 332,
+      "h": 36,
+      "text": "{{time}}",
+      "font": "sk_row",
+      "color": "sec",
+      "align": "right"
+    },
+    {
+      "id": "gear_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1540,
+      "y": 237,
+      "w": 120,
+      "h": 23,
+      "text": "GEAR",
+      "font": "sk_lab",
+      "color": "dim"
+    },
+    {
+      "id": "out",
+      "type": "text",
+      "z": 5,
+      "x": 1540,
+      "y": 262,
+      "w": 120,
+      "h": 36,
+      "text": "{{ambientN}}°",
+      "font": "sk_row",
+      "color": "sec"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1640,
+      "y": 242,
+      "w": 244,
+      "h": 196,
+      "text": "{{gearnum}}",
+      "font": "sk_gear",
+      "color": "fg",
+      "align": "center"
+    }
+  ]
+}

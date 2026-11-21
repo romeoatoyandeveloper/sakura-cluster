@@ -47,6 +47,7 @@ const TYPES = {
     nav: [],
     sakura: ['plates'],
     photo: ['art', 'photo'],
+    scene: ['scene'],
 };
 const CLASSES = ['ambient', 'content', 'overlay', 'alert'];
 

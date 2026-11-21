@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 2,
+  "name": "Neon City",
+  "packWaste": 3,
+  "theme": "neoncity",
+  "widgets": [
+    {
+      "id": "scene",
+      "type": "scene",
+      "scene": "neon",
+      "class": "content",
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "keep": [
+        1380,
+        660,
+        1460,
+        720
+      ]
+    },
+    {
+      "id": "speed_lab",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 183,
+      "w": 400,
+      "h": 27,
+      "text": "SPEED  {{u:speed}}",
+      "font": "head",
+      "color": "dim"
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 244,
+      "w": 400,
+      "h": 93,
+      "text": "{{speed}}",
+      "font": "big",
+      "color": "fg",
+      "color2": "pink"
+    },
+    {
+      "id": "clock",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 361,
+      "w": 400,
+      "h": 45,
+      "text": "{{time}}",
+      "font": "small",
+      "color": "sec"
+    },
+    {
+      "id": "gear_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1370,
+      "y": 183,
+      "w": 400,
+      "h": 27,
+      "text": "GEAR",
+      "font": "head",
+      "color": "dim",
+      "align": "right"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1370,
+      "y": 254,
+      "w": 400,
+      "h": 83,
+      "text": "{{gear}}",
+      "font": "n_gear",
+      "color": "fg",
+      "align": "right",
+      "color2": "pink"
+    },
+    {
+      "id": "out",
+      "type": "text",
+      "z": 5,
+      "x": 1370,
+      "y": 361,
+      "w": 400,
+      "h": 45,
+      "text": "{{ambientN}}°",
+      "font": "small",
+      "color": "sec",
+      "align": "right"
+    }
+  ]
+}

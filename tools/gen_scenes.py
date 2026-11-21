@@ -1,0 +1,347 @@
+#!/usr/bin/env python3
+"""Write the scene themes' layouts (apps/cluster_themes/hud/layouts/<name>.json), in panel px. Edit this, not the JSON:
+
+    python3 tools/gen_scenes.py apps/cluster_themes
+
+Each is one "scene" backdrop (shaders.js scene_*: the world and the revs, drawn with no pictures) and its text, in fonts
+the app already has: Night Drive (Orbitron, the speed in chrome), Warp (Michroma, the speed inside the rev ring), Neon City
+(Barlow Condensed), Jet HUD (Orbitron in green boxes beside the tapes), Paper (Outfit, ink on paper, the rpm numbers
+under the inked line) and Four Seasons (Outfit on two plates). Text is placed by baseline using the baked fonts' metrics.
+"""
+import json, math, os, sys
+
+APP = sys.argv[1]
+FONTS = os.path.join(APP, 'hud', 'fonts')
+M = {}
+
+
+def font(n):
+    if n not in M: M[n] = json.load(open(os.path.join(FONTS, n + '.json')))
+    return M[n]
+
+
+KEEP = [1380, 660, 1460, 720]            # BMW's gear letter in its bottom strip stays uncovered
+
+
+class Layout:
+    def __init__(self, name, title, scene, **kw):
+        self.name, self.title = name, title
+        self.w = [dict({'id': 'scene', 'type': 'scene', 'scene': scene, 'class': 'content', 'z': 0, 'x': 0, 'y': 0, 'w': 1920,
+                        'h': 720, 'keep': KEEP}, **kw)]
+
+    def text(self, id, x, y_base, w, txt, f, color, **kw):
+        m = font(f)
+        d = {'id': id, 'type': 'text', 'z': 5, 'x': x, 'y': y_base - m['baseline'], 'w': w, 'h': m['cellHeight'],
+             'text': txt, 'font': f, 'color': color}
+        d.update(kw)
+        self.w.append(d)
+
+    def write(self):
+        out = os.path.join(APP, 'hud', 'layouts', self.name + '.json')
+        json.dump({'schemaVersion': 2, 'name': self.title, 'packWaste': 3, 'theme': self.name, 'widgets': self.w},
+                  open(out, 'w', encoding='utf8'), indent=2, ensure_ascii=False)
+        print('wrote', out, len(self.w), 'widgets')
+
+
+# Night Drive: the speed left and the gear right of the sun, in Orbitron, the big figures chrome (white to pink)
+L = Layout('nightdrive', 'Night Drive', 'synth')
+L.text('speed_lab', 150, 186, 200, 'SPEED', 'm_label', 'dim')
+L.text('speed_u', 236, 186, 120, '{{u:speedLc}}', 'm_unit', 'dim')
+L.text('clock', 380, 190, 180, '{{time}}', 'm_mid', 'sec', align='right')
+L.text('speed', 150, 318, 410, '{{speed}}', 'm_gear', 'fg', align='right', color2='pink')
+L.text('gear_lab', 1360, 186, 200, 'GEAR', 'm_label', 'dim')
+L.text('out', 1590, 186, 180, '{{ambientN}}{{u:temp}}', 'm_label', 'sec', align='right')
+L.text('gear', 1360, 318, 410, '{{gear}}', 'm_gear', 'fg', align='left', color2='pink')
+L.write()
+
+# Warp: the speed inside the rev ring, the clock and outside on the left, the gear on the right
+L = Layout('warp', 'Warp', 'warp')
+L.text('speed', 760, 372, 400, '{{speed}}', 's_hero', 'fg', align='center')
+L.text('speed_u', 760, 420, 400, '{{u:speedLc}}', 's_unit', 'dim', align='center')
+L.text('time_lab', 150, 236, 360, 'TIME', 's_label', 'dim')
+L.text('clock', 150, 290, 360, '{{time}}', 'm_mid', 'fg')
+L.text('out', 150, 336, 360, '{{ambientN}}{{u:temp}} outside', 's_unit', 'sec')
+L.text('gear_lab', 1410, 236, 360, 'GEAR', 's_label', 'dim', align='right')
+L.text('gear', 1410, 330, 360, '{{gear}}', 's_gear', 'fg', align='right')
+L.text('mode', 1410, 376, 360, '{{mode}}', 's_label', 'sec', align='right')
+L.write()
+
+# Neon City: neon type over the skyline, the speed and clock left, the gear and outside right
+L = Layout('neoncity', 'Neon City', 'neon')
+L.text('speed_lab', 150, 206, 400, 'SPEED  {{u:speed}}', 'head', 'dim')
+L.text('speed', 150, 334, 400, '{{speed}}', 'big', 'fg', color2='pink')
+L.text('clock', 150, 404, 400, '{{time}}', 'small', 'sec')
+L.text('gear_lab', 1370, 206, 400, 'GEAR', 'head', 'dim', align='right')
+L.text('gear', 1370, 334, 400, '{{gear}}', 'n_gear', 'fg', align='right', color2='pink')
+L.text('out', 1370, 404, 400, '{{ambientN}}°', 'small', 'sec', align='right')
+L.write()
+
+# Jet HUD: the numbers in the boxes beside the tapes, the gear and the g under them, the clock above, SHIFT in the middle
+L = Layout('jethud', 'Jet HUD', 'jet')
+L.text('speed_lab', 212, 334, 144, 'SPEED', 'm_label', 'dim', align='center')
+L.text('speed', 212, 396, 144, '{{speed}}', 'm_mid', 'fg', align='center')
+L.text('rpm_lab', 1564, 334, 156, 'RPM', 'm_label', 'dim', align='center')
+L.text('rpm', 1564, 396, 156, '{{rpm}}', 'm_mid', 'fg', align='center')
+L.text('gear_lab', 212, 616, 144, 'GEAR', 'm_label', 'dim', align='center')
+L.text('gear', 212, 694, 144, '{{gear}}', 's_gear', 'fg', align='center')
+L.text('g_lab', 1564, 616, 196, 'G-FORCE', 'm_label', 'dim')
+L.text('glat_lab', 1564, 652, 76, 'LAT', 'm_label', 'dim')
+L.text('glat', 1644, 654, 116, '{{gLat}}', 'm_tyre', 'fg', align='right')
+L.text('glong_lab', 1564, 688, 76, 'LONG', 'm_label', 'dim')
+L.text('glong', 1644, 690, 116, '{{gLong}}', 'm_tyre', 'fg', align='right')
+L.text('clock', 212, 150, 144, '{{time}}', 's_val', 'fg', align='center')
+L.text('shift', 880, 470, 160, 'SHIFT', 'm_label', 'sec', align='center', showWhen='shift', rate=25)
+L.write()
+
+# Paper: the speed big in the middle, the inked rev line under it with its numbers, the clock and outside on the left, the
+# gear and range on the right, the drive mode at the foot of the page
+L = Layout('paper', 'Paper', 'paper', nightDim=0.55)
+L.text('speed', 560, 430, 800, '{{speed}}', 'b_speed', 'fg', align='center')
+L.text('speed_u', 560, 478, 800, '{{u:speedLc}}', 'b_unit', 'dim', align='center')
+L.w.append({'id': 'revs', 'type': 'scale', 'z': 5, 'x': 240, 'y': 548, 'w': 1440, 'h': font('b_scale')['cellHeight'],
+            'font': 'b_scale', 'color': 'dim', 'redFrom': True})
+L.text('time_lab', 240, 196, 300, 'TIME', 'b_label', 'dim')
+L.text('clock', 240, 246, 300, '{{time}}', 'b_val', 'fg')
+L.text('out_lab', 240, 306, 300, 'OUTSIDE', 'b_label', 'dim')
+L.text('out', 240, 356, 300, '{{ambientN}}{{u:temp}}', 'b_val', 'fg')
+L.text('gear_lab', 1380, 196, 300, 'GEAR', 'b_label', 'dim', align='right')
+L.text('gear', 1380, 330, 300, '{{gear}}', 'mb_gear', 'fg', align='right')
+L.text('range', 1380, 396, 300, '{{range}} {{u:distLc}}', 'b_val', 'sec', align='right')
+L.text('mode', 560, 650, 800, '{{mode}}', 'b_label', 'dim', align='center')
+L.write()
+
+# Four Seasons: two plates over the landscape, Outfit
+L = Layout('seasons', 'Four Seasons', 'seasons')
+L.text('speed_lab', 150, 200, 200, 'SPEED', 'mb_label', 'dim')
+L.text('speed_u', 380, 200, 180, '{{u:speedLc}}', 'mb_unit', 'dim', align='right')
+L.text('speed', 150, 332, 410, '{{speed}}', 'mb_speed', 'fg', align='right')
+L.text('clock', 150, 380, 410, '{{time}} {{ampm}}', 'mb_row', 'sec')
+L.text('gear_lab', 1360, 200, 200, 'GEAR', 'mb_label', 'dim')
+L.text('gear', 1360, 332, 410, '{{gear}}', 'mb_gear', 'fg', align='center')
+L.text('out', 1360, 380, 410, '{{ambientN}}{{u:temp}}', 'mb_row', 'sec', align='right')
+L.write()
+
+# Chronograph: two watch dials (shaders.js scene_chrono); their numerals as text round the dial, the speed and revs as small
+# digital readouts in each, the gear in a white date window between them, the clock under it
+L = Layout('chrono', 'Chronograph', 'chrono')
+for (cx, cy), vals, vmax, key in (((500, 370), range(0, 261, 40), 260, 'kmh'), ((1420, 370), range(0, 9), 8, 'rpm')):
+    m = font('b_val')
+    for v in vals:
+        a = math.radians(-135 + 270 * v / vmax)
+        x, y = cx + math.sin(a) * 196, cy - math.cos(a) * 196
+        L.text('n_%s_%d' % (key, v), int(x - 40), int(y + m['cellHeight'] / 2 - m['baseline'] / 2 + 8), 80, str(v), 'b_val', 'fg', align='center')
+L.text('speed', 400, 296, 200, '{{speed}}', 'b_val', 'fg', align='center')
+L.text('speed_u', 400, 326, 200, '{{u:speedLc}}', 'b_unit', 'dim', align='center')
+L.text('rpm_u', 1320, 326, 200, 'RPM X1000', 'b_label', 'dim', align='center')
+L.text('gear', 890, 404, 140, '{{gear}}', 'b_val', 'ink', align='center')
+L.text('clock', 840, 470, 240, '{{time}}', 'b_val', 'sec', align='center')
+L.text('out', 840, 512, 240, '{{ambientN}}{{u:temp}}', 'mb_row', 'dim', align='center')
+L.write()
+
+# Aurora: Outfit, white over the night sky: the speed on the left, the gear on the right
+L = Layout('aurora', 'Northern Lights', 'aurora')
+L.text('speed_lab', 150, 210, 200, 'SPEED', 'mb_label', 'dim')
+L.text('speed_u', 390, 210, 170, '{{u:speedLc}}', 'mb_unit', 'dim', align='right')
+L.text('speed', 150, 342, 410, '{{speed}}', 'mb_speed', 'fg', align='right')
+L.text('clock', 150, 392, 410, '{{time}} {{ampm}}', 'mb_row', 'sec', align='right')
+L.text('gear_lab', 1360, 210, 200, 'GEAR', 'mb_label', 'dim')
+L.text('gear', 1360, 342, 410, '{{gear}}', 'mb_gear', 'fg')
+L.text('out', 1360, 392, 410, '{{ambientN}}{{u:temp}}', 'mb_row', 'sec')
+L.write()
+
+# Light Trails: Michroma, the speed left and the gear right of the road
+L = Layout('trails', 'Light Trails', 'trails')
+L.text('speed', 120, 300, 440, '{{speed}}', 's_hero', 'fg', align='right')
+L.text('speed_u', 120, 346, 440, '{{u:speedLc}}', 's_unit', 'dim', align='right')
+L.text('clock', 120, 404, 440, '{{time}}', 'm_mid', 'sec', align='right')
+L.text('gear', 1360, 300, 440, '{{gear}}', 's_gear', 'fg')
+L.text('mode', 1360, 346, 440, '{{mode}}', 's_label', 'dim')
+L.text('out', 1360, 404, 440, '{{ambientN}}{{u:temp}} outside', 's_unit', 'sec')
+L.write()
+
+# Neon Falls: pixel fonts (Press Start 2P, Silkscreen) on the two plates the shader draws (art px x 4: 96,200 and 1448,200,
+# 376 x 256): the speed and clock on the left, the gear (just its number or P R N) on the right
+L = Layout('falls', 'Neon Falls', 'falls')
+L.text('speed_lab', 120, 248, 160, 'SPEED', 'sk_lab', 'dim')
+L.text('speed_u', 300, 248, 152, '{{u:speed}}', 'sk_lab', 'dim', align='right')
+L.text('speed', 120, 378, 332, '{{speed}}', 'sk_speed96', 'fg', align='right')
+L.text('clock', 120, 432, 332, '{{time}}', 'sk_row', 'sec', align='right')
+L.text('gear_lab', 1472, 248, 160, 'GEAR', 'sk_lab', 'dim')
+L.text('out', 1632, 250, 168, '{{ambientN}}°', 'sk_row', 'sec', align='right')
+L.text('gear', 1472, 450, 328, '{{gearnum}}', 'sk_gear', 'fg', align='center')
+L.write()
+
+# Cosmic Swim: Outfit over the nebula sky, the speed left and the gear right of the astronaut
+L = Layout('swim', 'Cosmic Swim', 'swim')
+L.text('speed_lab', 150, 212, 200, 'SPEED', 'mb_label', 'dim')
+L.text('speed_u', 390, 212, 170, '{{u:speedLc}}', 'mb_unit', 'dim', align='right')
+L.text('speed', 150, 344, 410, '{{speed}}', 'mb_speed', 'fg', align='right')
+L.text('clock', 150, 394, 410, '{{time}} {{ampm}}', 'mb_row', 'sec', align='right')
+L.text('gear_lab', 1360, 212, 200, 'GEAR', 'mb_label', 'dim')
+L.text('gear', 1360, 344, 410, '{{gear}}', 'mb_gear', 'fg')
+L.text('out', 1360, 394, 410, '{{ambientN}}{{u:temp}}', 'mb_row', 'sec')
+L.write()
+
+
+def pixel_hud(L, left, right, gear_x):
+    """Press Start 2P / Silkscreen text on two plates or screens (panel px): the speed, its unit and the clock on the
+    left; the gear (its number, or P R N) big on the right with its label and the outside temperature beside it."""
+    x, y, w, h = left
+    L.text('speed_lab', x + 24, y + 44, 160, 'SPEED', 'sk_lab', 'dim')
+    L.text('speed_u', x + w - 24 - 160, y + 44, 160, '{{u:speed}}', 'sk_lab', 'dim', align='right')
+    L.text('speed', x + 24, y + 154, w - 48, '{{speed}}', 'sk_speed96', 'fg', align='right')
+    L.text('clock', x + 24, y + 200, w - 48, '{{time}}', 'sk_row', 'sec', align='right')
+    x, y, w, h = right
+    L.text('gear_lab', x + 24, y + 44, 120, 'GEAR', 'sk_lab', 'dim')
+    L.text('out', x + 24, y + 86, 120, '{{ambientN}}°', 'sk_row', 'sec')
+    L.text('gear', gear_x, y + h - 4, x + w - gear_x - 12, '{{gearnum}}', 'sk_gear', 'fg', align='center')
+
+
+# Night Train: the two plates in the sky (art 24,44 and 362,44, 94 x 54)
+L = Layout('train', 'Night Train', 'train')
+pixel_hud(L, (96, 176, 376, 216), (1448, 176, 376, 216), 1580)
+L.write()
+# Rainy Window: the text on the dark walls either side of the window
+L = Layout('rain', 'Rainy Window', 'rain')
+pixel_hud(L, (24, 200, 380, 230), (1516, 210, 380, 230), 1640)
+L.write()
+# Station Window: the two wall screens (art 16,52 and 376,52, 88 x 62)
+L = Layout('orbit', 'Station Window', 'orbit')
+pixel_hud(L, (64, 208, 352, 248), (1504, 208, 352, 248), 1620)
+L.write()
+
+
+# --- the canvas designs (the "Sakura 桜 cluster theme" canvas, Modern collection), placed where their CSS puts them ---------
+from PIL import ImageFont
+SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts-src')
+
+
+def metrics(ttf, size):
+    return ImageFont.truetype(os.path.join(SRC, ttf), size).getmetrics()       # (ascent, descent), as CSS's content area
+
+
+def css_base(top, lh, ttf, size):
+    """The baseline of a CSS line box at top, line-height lh (None: normal) in that font."""
+    a, d = metrics(ttf, size)
+    if lh is None: lh = a + d
+    return top + (lh - (a + d)) / 2 + a
+
+
+def width(ttf, size, s, track=0):
+    f = ImageFont.truetype(os.path.join(SRC, ttf), size)
+    return f.getlength(s) + track * len(s)
+
+
+def adv(f, txt):
+    """A text's width in a baked font (its tabular digits included), px."""
+    g = font(f)['glyphs']
+    return sum(g[c]['advance'] for c in txt if c in g)
+
+
+def T(L, id, x, base, w, txt, f, color, **kw):
+    L.text(id, int(round(x)), int(round(base)), int(round(w)), txt, f, color, **kw)
+
+
+# Aurora (05 · AURORA, Modern EV glass): Sora; the glass cards at 180,224 and 1320,224 (420 x 376), the ring round 960,405
+L = Layout('evaurora', 'Aurora', 'glass', nightDim=0.8)
+S3, S4, S6 = 'Sora-300.ttf', 'Sora-400.ttf', 'Sora-600.ttf'
+T(L, 'mode', 660, 239 + metrics(S6, 13)[0], 600, '{{mode}}', 'au_cap', 'sec', align='center')
+T(L, 'gear', 760, css_base(282, 184, S3, 232), 400, '{{gearnum}}', 'au_gear', 'fg', align='center')
+sb = css_base(482, 64, S4, 64)
+grp = width(S4, 64, '45') + 8 + width(S4, 18, 'mph')
+nr = 960 + grp / 2 - width(S4, 18, 'mph') - 8
+T(L, 'speed', nr - 300, sb, 300, '{{speed}}', 'au_speed', 'fg', align='right')
+T(L, 'speed_u', nr + 8, sb, 80, '{{u:speedLc}}', 'au_unit', 'dim')
+cap_lh = sum(metrics(S6, 13))
+rows = [251 + cap_lh + 22]
+rows += [rows[0] + 78, rows[0] + 156]
+for (x0, title) in ((211, 'POWERTRAIN'), (1351, 'DYNAMICS')):
+    T(L, title.lower() + '_lab', x0, 251 + metrics(S6, 13)[0], 300, title, 'au_cap', 'dim')
+
+
+def card_row(key, x0, top, label, value, units, unit_txt, warn=None):
+    right = x0 + 358
+    uw = max(width(S4, 16, u) for u in units)
+    vb = css_base(top, 40, S3, 40)
+    lb = top + 40 - metrics(S4, 16)[1]
+    kw = {'showWhen': '!warn:' + warn} if warn else {}
+    T(L, key + '_lab', x0, lb, 200, label, 'au_unit', 'dim', **kw)
+    vk = {'warnColor': 'amber', 'warnFlash': False} if warn else {}
+    T(L, key, right - uw - 6 - 220, vb, 220, value, 'au_val', 'fg', align='right', **vk)
+    T(L, key + '_u', right - uw, vb, uw + 2, unit_txt, 'au_unit', 'dim')
+    if warn:
+        T(L, key + '_high', x0, top + 40 - metrics(S6, 13)[1], 220, label.upper() + ' · HIGH', 'au_cap', 'amber', showWhen='warn:' + warn)
+
+
+card_row('oil', 211, rows[0], 'Oil', '{{oil}}°', ['F', 'C'], '{{u:deg}}')
+card_row('coolant', 211, rows[1], 'Coolant', '{{coolant}}°', ['F', 'C'], '{{u:deg}}', warn='coolant')
+card_row('fuel', 211, rows[2], 'Fuel', '{{fuelPct}}', ['%'], '%')
+card_row('boost', 1351, rows[0], 'Boost', '{{boost}}', ['psi', 'bar'], '{{u:boostLc}}')
+gtop = rows[0] + 56 + 26
+lt = gtop + (150 - (sum(metrics(S4, 16)) + 8 + 40)) / 2
+T(L, 'g_lab', 1351, lt + metrics(S4, 16)[0], 200, 'G-force', 'au_unit', 'dim')
+gb = css_base(lt + sum(metrics(S4, 16)) + 8, 40, S3, 40)
+T(L, 'g', 1351, gb, 160, '{{gNow}}', 'au_val', 'fg')
+T(L, 'g_u', 1351 + adv('au_val', '0.0') + 6, gb, 30, 'g', 'au_unit', 'dim')
+for i, (x, y) in enumerate([(716.6, 550.5), (679.8, 389.0), (740.3, 234.8), (877.2, 141.5), (1042.8, 141.5), (1179.7, 234.8), (1240.2, 389.0), (1203.4, 550.5)]):
+    T(L, 'tick%d' % i, x - 12, y, 24, str(i), 'au_tick', 'red' if i == 7 else 'dim', align='center')
+rb = 668 + metrics(S4, 24)[0]
+tr = 180 + width(S4, 24, '12:00')
+T(L, 'clock', tr - 140, rb, 140, '{{time}}', 'au_row', 'fg', align='right')
+T(L, 'ampm', tr + 8, rb, 60, '{{ampm}}', 'au_unit', 'dim')
+cg = width(S4, 24, '238 mi') + 8 + width(S4, 16, 'range')
+cr = 960 + cg / 2 - width(S4, 16, 'range') - 8
+T(L, 'range', cr - 200, rb, 200, '{{range}} {{u:distLc}}', 'au_row', 'fg', align='right')
+T(L, 'range_l', cr + 8, rb, 80, 'range', 'au_unit', 'dim')
+T(L, 'out', 1500, rb, 110, '{{ambientN}}°{{u:deg}}', 'au_row', 'fg')
+T(L, 'out_l', 1500 + adv('au_row', '54°F') + 8, rb, 90, 'outside', 'au_unit', 'dim')
+pb = 570 + 1 + 8 + metrics(S6, 16)[0]
+T(L, 'shift_up', 941, pb, 120, 'Shift up', 'au_pill', 'orange', showWhen='shift', rate=25)
+T(L, 'warn_pill', 824, pb, 320, 'Coolant temperature high · {{coolant}}°{{u:deg}}', 'au_pill', 'amber', showWhen='warn:coolant', warnFlash=False)
+L.write()
+
+# Orbital (08 · ORBITAL, Space telemetry): Space Grotesk and Space Mono; the orbit round 960,392, the globe at 1540,408.
+# The design's rpm label rides beside the satellite; here it stays put above the orbit (a text can't move on the cluster).
+L = Layout('orbital', 'Orbital', 'orbital', nightDim=0.8)
+G3, G4, M4, M7 = 'SpaceGrotesk-300.ttf', 'SpaceGrotesk-400.ttf', 'SpaceMono-400.ttf', 'SpaceMono-700.ttf'
+T(L, 'rpm', 840, css_base(184, 18, M4, 14), 240, '{{rpmSp}} RPM', 'ob_rpm', 'fg', align='center', hotWhen='now')
+T(L, 'mode', 660, css_base(246, 18, M4, 14), 600, '{{mode}}', 'ob_mode', 'sec', align='center')
+T(L, 'gear', 810, css_base(292, 200, G3, 250), 300, '{{gearnum}}', 'ob_gear', 'fg', align='center')
+T(L, 'scale', 660, css_base(506, 16, M4, 12), 600, 'RPM × 1000', 'ob_small', 'dim', align='center')
+T(L, 'vel_lab', 180, css_base(232, 17, M4, 13), 200, 'VELOCITY', 'ob_lab', 'dim')
+T(L, 'speed', 176, css_base(254, 120, G3, 150), 380, '{{speed}}', 'ob_speed', 'fg')
+T(L, 'speed_u', 184, css_base(382, 19, M4, 15), 120, '{{u:speed}}', 'ob_unit', 'dim')
+for key, lt_, vt, label, val, warn in (('oil', 462, 452, 'OIL TEMP', '{{oil}}°{{u:deg}}', None), ('coolant', 518, 508, 'COOLANT', '{{coolant}}°{{u:deg}}', 'coolant'),
+                                       ('fuel', 574, 564, 'FUEL', '{{fuelPct}}%', None)):
+    lb = css_base(lt_, 16, M4, 12)
+    if warn:
+        T(L, key + '_lab', 180, lb, 150, label, 'ob_lab', 'dim', showWhen='!warn:' + warn)
+        T(L, key + '_warn', 180, lb, 80, label, 'ob_lab', 'amber', showWhen='warn:' + warn)
+        T(L, key + '_badge', 263, lb, 76, 'ANOMALY', 'ob_small', 'ink', showWhen='warn:' + warn)
+    else:
+        T(L, key + '_lab', 180, lb, 150, label, 'ob_lab', 'dim')
+    vk = {'warnColor': 'amber', 'warnFlash': False} if warn else {}
+    T(L, key, 340, css_base(vt, 34, G4, 30), 200, val, 'ob_val', 'fg', align='right', **vk)
+T(L, 'boost_lab', 1400, css_base(232, 17, M4, 13), 200, 'BOOST', 'ob_lab', 'dim')
+bb = css_base(254, 64, G3, 72)
+T(L, 'boost', 1398, bb, 220, '{{boost}}', 'ob_boost', 'fg')
+T(L, 'boost_u', 1398 + adv('ob_boost', '18.6') + 8, bb, 80, '{{u:boost}}', 'ob_unit', 'dim')
+T(L, 'g_lab', 1400, css_base(384, 17, M4, 13), 240, 'G · ATTITUDE', 'ob_lab', 'dim')
+gb = css_base(470, 50, G3, 56)
+T(L, 'g', 1398, gb, 130, '{{gNow}}', 'ob_g', 'fg')
+T(L, 'g_u', 1398 + adv('ob_g', '0.0') + 6, gb, 30, 'G', 'ob_unit', 'dim')
+for i, (x, y) in enumerate([(617.5, 497.5), (580.0, 332.2), (721.3, 242.0), (878.9, 209.8), (1040.3, 209.7), (1198.1, 241.8), (1339.7, 331.8), (1302.9, 497.1)]):
+    T(L, 'tick%d' % i, x - 12, y, 24, str(i), 'ob_tick', 'red' if i == 7 else 'dim', align='center')
+rb = css_base(670, 22, M4, 18)
+tw = width(M4, 18, '12:00', 3.6)
+T(L, 'clock', 180, rb, tw + 4, '{{time}}', 'ob_row', 'fg', align='right')
+T(L, 'ampm', 180 + tw + 12, rb, 60, '{{ampm}}', 'ob_row', 'dim')
+T(L, 'range_l', 760, rb, 160 - 8, 'RANGE', 'ob_row', 'dim', align='right')
+T(L, 'range', 920, rb, 80, '{{range}}', 'ob_row', 'fg', align='center')
+T(L, 'range_u', 1008, rb, 80, '{{u:dist}}', 'ob_row', 'dim')
+T(L, 'out_l', 1500, rb, 70, 'EXT', 'ob_row', 'dim')
+T(L, 'out', 1500 + width(M4, 18, 'EXT ', 3.6), rb, 140, '{{ambientN}}°{{u:deg}}', 'ob_row', 'fg')
+tb = 128 + 1 + 6 + metrics(M7, 16)[0]
+T(L, 'shift_tag', 913, tb, 90, 'SHIFT', 'ob_alert', 'orange', showWhen='shift', rate=25)
+T(L, 'warn_tag', 800, tb, 360, 'COOLANT ANOMALY · {{coolant}}°{{u:deg}}', 'ob_alert', 'amber', showWhen='warn:coolant', warnFlash=False)
+L.write()

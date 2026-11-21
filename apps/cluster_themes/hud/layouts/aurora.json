@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 2,
+  "name": "Northern Lights",
+  "packWaste": 3,
+  "theme": "aurora",
+  "widgets": [
+    {
+      "id": "scene",
+      "type": "scene",
+      "scene": "aurora",
+      "class": "content",
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "keep": [
+        1380,
+        660,
+        1460,
+        720
+      ]
+    },
+    {
+      "id": "speed_lab",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 192,
+      "w": 200,
+      "h": 21,
+      "text": "SPEED",
+      "font": "mb_label",
+      "color": "dim"
+    },
+    {
+      "id": "speed_u",
+      "type": "text",
+      "z": 5,
+      "x": 390,
+      "y": 188,
+      "w": 170,
+      "h": 29,
+      "text": "{{u:speedLc}}",
+      "font": "mb_unit",
+      "color": "dim",
+      "align": "right"
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 221,
+      "w": 410,
+      "h": 125,
+      "text": "{{speed}}",
+      "font": "mb_speed",
+      "color": "fg",
+      "align": "right"
+    },
+    {
+      "id": "clock",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 366,
+      "w": 410,
+      "h": 28,
+      "text": "{{time}} {{ampm}}",
+      "font": "mb_row",
+      "color": "sec",
+      "align": "right"
+    },
+    {
+      "id": "gear_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1360,
+      "y": 192,
+      "w": 200,
+      "h": 21,
+      "text": "GEAR",
+      "font": "mb_label",
+      "color": "dim"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1360,
+      "y": 233,
+      "w": 410,
+      "h": 114,
+      "text": "{{gear}}",
+      "font": "mb_gear",
+      "color": "fg"
+    },
+    {
+      "id": "out",
+      "type": "text",
+      "z": 5,
+      "x": 1360,
+      "y": 366,
+      "w": 410,
+      "h": 28,
+      "text": "{{ambientN}}{{u:temp}}",
+      "font": "mb_row",
+      "color": "sec"
+    }
+  ]
+}

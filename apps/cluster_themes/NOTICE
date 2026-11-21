@@ -41,6 +41,12 @@ Besides its own code, the app ships with:
    Silkscreen, Copyright 2001 The Silkscreen Project Authors (https://github.com/googlefonts/silkscreen);
    DotGothic16, Copyright 2020 The DotGothic16 Project Authors (https://github.com/fontworks-fonts/DotGothic16).
 
+4e. The Aurora and Orbital themes' typefaces (hud.pack, fonts/au_*, fonts/ob_*), pre-rendered glyphs, each under the
+   SIL Open Font License 1.1 (the same licence text as below):
+   Sora, Copyright 2019 The Sora Project Authors (https://github.com/sora-xor/sora-font);
+   Space Grotesk, Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk);
+   Space Mono, Copyright 2016 The Space Mono Project Authors (https://github.com/googlefonts/spacemono).
+
 5. The pixel-diff text update in hud.js (changes(): only the rectangle that changed goes up the link) is
    adapted from PenguinDukeYDAuto/idrive7-EVAHUD (shared/eva_canvas.js): MIT, Copyright (c) 2026 DukeAPenguin.
    https://github.com/PenguinDukeYDAuto/idrive7-EVAHUD

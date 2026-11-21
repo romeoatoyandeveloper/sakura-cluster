@@ -115,6 +115,29 @@ CLUSTER_FONTS = [
     ('mb_row', 'Outfit[wght].ttf', 34, DIGITS + ':.-+° CFAPM', 0, 'Regular', None, '°'),
     ('mb_unit', 'Outfit[wght].ttf', 26, LOWER + UPPER + DIGITS + '/°.-+ ', 0, 'Medium'),
     ('mb_label', 'Outfit[wght].ttf', 21, UPPER + DIGITS + " .-'", 0, 'SemiBold'),
+    # Aurora (the canvas's "05 · Aurora", EV glass): Sora (SIL OFL), at the design's sizes; caps spaced .18em
+    ('au_gear', 'Sora-300.ttf', 232, DIGITS + 'PRNDSM-'),
+    ('au_speed', 'Sora-400.ttf', 64, DIGITS + '-'),
+    ('au_val', 'Sora-300.ttf', 40, DIGITS + '.-+°%'),
+    ('au_unit', 'Sora-400.ttf', 16, LOWER + UPPER + DIGITS + ' °%/·.:-'),
+    ('au_row', 'Sora-400.ttf', 24, LOWER + UPPER + DIGITS + ' °%/.:-'),
+    ('au_cap', 'Sora-600.ttf', 13, UPPER + DIGITS + ' ·', 0, None, None, '', {'track': 2}),
+    ('au_tick', 'Sora-400.ttf', 14, DIGITS),
+    ('au_pill', 'Sora-600.ttf', 16, LOWER + UPPER + DIGITS + ' ·°.-'),
+    # Orbital (the canvas's "08 · Orbital", space telemetry): Space Grotesk and Space Mono (SIL OFL); mono caps spaced
+    ('ob_gear', 'SpaceGrotesk-300.ttf', 250, DIGITS + 'PRNDSM-'),
+    ('ob_speed', 'SpaceGrotesk-300.ttf', 150, DIGITS + '-'),
+    ('ob_boost', 'SpaceGrotesk-300.ttf', 72, DIGITS + '.-'),
+    ('ob_g', 'SpaceGrotesk-300.ttf', 56, DIGITS + '.-'),
+    ('ob_val', 'SpaceGrotesk-400.ttf', 30, DIGITS + '°FC%.-'),
+    ('ob_lab', 'SpaceMono-400.ttf', 13, UPPER + DIGITS + ' ·×°.-/', 0, None, None, '', {'track': 3}),
+    ('ob_small', 'SpaceMono-400.ttf', 12, UPPER + DIGITS + ' ·×', 0, None, None, '', {'track': 4}),
+    ('ob_unit', 'SpaceMono-400.ttf', 15, UPPER + '/', 0, None, None, '', {'track': 3}),
+    ('ob_mode', 'SpaceMono-400.ttf', 14, UPPER + DIGITS + ' ', 0, None, None, '', {'track': 5}),
+    ('ob_rpm', 'SpaceMono-400.ttf', 14, DIGITS + ' RPM-', 0, None, None, '', {'track': 2}),
+    ('ob_row', 'SpaceMono-400.ttf', 18, UPPER + DIGITS + ':°. -', 0, None, None, '', {'track': 4}),
+    ('ob_tick', 'SpaceMono-400.ttf', 12, DIGITS),
+    ('ob_alert', 'SpaceMono-700.ttf', 16, UPPER + DIGITS + ' ·°.-', 0, None, None, '', {'track': 4}),
     # Sakura: pixel fonts (SIL OFL), drawn without anti-aliasing so every font pixel stays a hard square. Press Start 2P
     # is an 8x8 font: at multiples of 32 px each font pixel is a whole number of the theme's 4 px art pixels.
     # Silkscreen for the English labels, DotGothic16 (16-dot) at 32 px for the Japanese ones (2 px a dot).
@@ -134,7 +157,7 @@ PAD = 2
 ATLAS_W = 1024
 
 
-def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck='', pixel=False, alt=None, narrow=''):
+def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck='', pixel=False, alt=None, narrow='', track=0):
     """stroke: px of extra weight round every glyph (Michroma has one weight). weight: a named instance of a
     variable font (Orbitron: Regular .. Black), for the M theme's squared BMW-style gear, speed and numbers.
     subs: {char: glyph drawn for it} (Orbitron's zero is slashed; the M8's is plain, so its O stands in).
@@ -143,6 +166,7 @@ def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck=''
     pixel: drawn without anti-aliasing (pixel fonts: every font pixel a hard square, alpha 0 or 255).
     alt: (file, px size) of a second font for the CJK characters (U+3000 and up), on the same baseline (Sakura's
     Japanese labels next to Silkscreen capitals).
+    track: px added to every advance (CSS letter-spacing: the canvas designs' spaced capitals).
     narrow: characters whose cell is cut to their ink plus one font pixel (an 8x8 pixel font: size / 8 px), so a
     monospaced font's '.', ':' and '°' sit next to the digits instead of in a whole cell of their own."""
     font = ImageFont.truetype(os.path.join(SRC, file), size)
@@ -163,7 +187,7 @@ def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck=''
     for c in chars:
         adv = fnt(c).getlength(glyph(c)) + (2 * stroke if c != ' ' else 0)
         if c == ' ':
-            cells.append((c, None, 0, round(adv if adv else size * 0.25)))
+            cells.append((c, None, 0, round((adv if adv else size * 0.25) + track)))
             continue
         l, _, r, _ = boxes[c]
         w = r - l + 2 * PAD
@@ -176,7 +200,7 @@ def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck=''
             ink = img.getbbox()
             cells.append((c, img, -ink[0], ink[2] - ink[0] + round(size / 8)))
             continue
-        cells.append((c, img, round(l - PAD + shift), round(tab if c in DIGITS else adv)))
+        cells.append((c, img, round(l - PAD + shift), round((tab if c in DIGITS else adv) + track)))
 
     # simple row packing
     x = y = 0

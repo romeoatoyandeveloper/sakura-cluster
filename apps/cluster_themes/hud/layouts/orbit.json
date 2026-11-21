@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 2,
+  "name": "Station Window",
+  "packWaste": 3,
+  "theme": "orbit",
+  "widgets": [
+    {
+      "id": "scene",
+      "type": "scene",
+      "scene": "orbit",
+      "class": "content",
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "keep": [
+        1380,
+        660,
+        1460,
+        720
+      ]
+    },
+    {
+      "id": "speed_lab",
+      "type": "text",
+      "z": 5,
+      "x": 88,
+      "y": 235,
+      "w": 160,
+      "h": 23,
+      "text": "SPEED",
+      "font": "sk_lab",
+      "color": "dim"
+    },
+    {
+      "id": "speed_u",
+      "type": "text",
+      "z": 5,
+      "x": 232,
+      "y": 235,
+      "w": 160,
+      "h": 23,
+      "text": "{{u:speed}}",
+      "font": "sk_lab",
+      "color": "dim",
+      "align": "right"
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 88,
+      "y": 264,
+      "w": 304,
+      "h": 100,
+      "text": "{{speed}}",
+      "font": "sk_speed96",
+      "color": "fg",
+      "align": "right"
+    },
+    {
+      "id": "clock",
+      "type": "text",
+      "z": 5,
+      "x": 88,
+      "y": 374,
+      "w": 304,
+      "h": 36,
+      "text": "{{time}}",
+      "font": "sk_row",
+      "color": "sec",
+      "align": "right"
+    },
+    {
+      "id": "gear_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1528,
+      "y": 235,
+      "w": 120,
+      "h": 23,
+      "text": "GEAR",
+      "font": "sk_lab",
+      "color": "dim"
+    },
+    {
+      "id": "out",
+      "type": "text",
+      "z": 5,
+      "x": 1528,
+      "y": 260,
+      "w": 120,
+      "h": 36,
+      "text": "{{ambientN}}°",
+      "font": "sk_row",
+      "color": "sec"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1620,
+      "y": 258,
+      "w": 224,
+      "h": 196,
+      "text": "{{gearnum}}",
+      "font": "sk_gear",
+      "color": "fg",
+      "align": "center"
+    }
+  ]
+}

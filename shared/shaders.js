@@ -2010,4 +2010,1272 @@ void main() {
 }
 `;
 
-module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA, photo: PHOTO };
+// ---------------------------------------------------------------------------------------------------------------------
+// Scene themes (widget type "scene", hud.js _sceneUpdate): a whole theme's backdrop in one effect layer, drawn with no
+// pictures. Every scene gets the same inputs; positions are layer px (u_size), (0,0) the top-left:
+//   u_v   x speed 0..1 (of 200 km/h), y revs 0..1 (of the bar max), z the shift flash (0 / 1), w the redline 0..1
+//   u_g   x cornering g (+ left), y g along the car (+ speeding up), z boost 0..1                          (Jet HUD)
+//   u_a   the scene's clocks (distance and time phases, hud.js says which)       (Night Drive, Warp, Neon City, Seasons)
+//   u_b   the scene's numbers                                                     (Jet HUD, Paper, Seasons)
+//   u_c1..u_c4 the theme's colour roles c1..c4; u_keep (x0, y0, x1, y1) stays see-through (BMW's gear letter); u_dim
+// Every scene stays small for the cluster's GPU: no textures, loops of at most four.
+const SCENE_HEAD = `#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+varying vec2 v_uv;
+uniform vec2 u_size;
+uniform vec4 u_v;
+uniform vec4 u_keep;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+uniform vec3 u_c3;
+uniform vec3 u_c4;
+uniform float u_dim;
+float hash(vec2 p) {
+    vec3 q = fract(vec3(p.xyx) * 0.1031);
+    q += dot(q, q.yzx + 33.33);
+    return fract((q.x + q.y) * q.z);
+}
+bool kept(vec2 p) { return p.x >= u_keep.x && p.x < u_keep.z && p.y >= u_keep.y && p.y < u_keep.w; }
+`;
+
+// Night Drive: a purple sky over a neon grid that runs towards you with the speed, a striped sun whose glow pulses with
+// the revs, mountains at the sides. The revs light the horizon line from the middle out. u_a: x the grid's phase, y the
+// mountains' offset (px), z seconds. c1 the night sky, c2 magenta, c3 the sun's yellow, c4 the grid's cyan.
+const SCENE_SYNTH = SCENE_HEAD + `uniform vec4 u_a;
+const float HZ = 400.0;
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c;
+    if (p.y < HZ) {
+        c = mix(u_c1, u_c2 * 0.85, (p.y / HZ) * (p.y / HZ));
+        vec2 cell = floor(p / 36.0);
+        float h = hash(cell);
+        if (h > 0.86 && p.y < 270.0) {
+            vec2 sp = cell * 36.0 + 6.0 + 24.0 * vec2(hash(cell + 3.1), hash(cell + 7.7));
+            c += vec3(smoothstep(1.6, 0.0, length(p - sp)) * (0.45 + 0.55 * fract(h * 13.0 + u_a.z * 0.25)));
+        }
+        vec2 sc = vec2(960.0, HZ - 30.0);
+        float R = 210.0, d = length(p - sc);
+        c += u_c2 * 0.45 * (0.6 + 0.9 * u_v.y) * exp(-max(d - R, 0.0) / 70.0) * step(R, d);
+        if (d < R) {
+            vec3 sun = mix(u_c3, u_c2, smoothstep(0.1, 0.95, (p.y - (sc.y - R)) / (2.0 * R)));
+            float b = p.y - (sc.y - 0.25 * R);
+            if (!(b > 0.0 && mod(b, 22.0) < 2.0 + 10.0 * b / (1.25 * R))) c = sun;
+        }
+        float mx = p.x + u_a.y;
+        float hg = max(95.0 * (1.0 - abs(fract(mx / 430.0) * 2.0 - 1.0)), 60.0 * (1.0 - abs(fract((mx + 170.0) / 270.0) * 2.0 - 1.0)));
+        hg *= smoothstep(230.0, 560.0, abs(p.x - 960.0));
+        float top = HZ - hg;
+        if (p.y > top) c = mix(u_c1 * 0.7, u_c2 * 0.22, (p.y - top) / max(hg, 1.0));
+        if (abs(p.y - top) < 1.5 && hg > 3.0) c = u_c4;
+    } else {
+        float y = p.y - HZ + 0.5;
+        c = mix(u_c1 * 0.55, vec3(0.02, 0.0, 0.05), smoothstep(0.0, 320.0, y));
+        float z = 4200.0 / y, f = fract(z / 60.0 + u_a.x), dz = 4200.0 / (y * y) / 60.0 * 1.8;
+        float h1 = 1.0 - smoothstep(dz * 0.5, dz * 1.5, min(f, 1.0 - f));
+        float g = fract((p.x - 960.0) / y * 2.2), dw = 2.2 / y * 1.4;
+        float v1 = 1.0 - smoothstep(dw * 0.5, dw * 1.5, min(g, 1.0 - g));
+        float line = max(h1, v1) * smoothstep(0.0, 30.0, y);
+        c = mix(c, u_c4, line * 0.9) + u_c4 * 0.1 * line;
+        c += u_c2 * 0.28 * exp(-y / 40.0) * exp(-abs(p.x - 960.0) / 420.0);
+    }
+    float hy = abs(p.y - HZ);
+    if (hy < 5.0) {
+        float f = abs(p.x - 960.0) / 960.0;
+        vec3 on = f >= u_v.w ? vec3(1.0, 0.25, 0.25) : mix(vec3(1.0), u_c4, f);
+        if (u_v.z > 0.5) on = vec3(1.0, 0.2, 0.3);
+        c = mix(c, f < u_v.y ? on : u_c2 * 0.55, 1.0 - smoothstep(1.5, 5.0, hy));
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Warp: stars streaming out of the middle, dots when slow, long streaks when fast; the revs a ring round the middle
+// (from 7:30 round to 4:30), the whole sky flashing at the shift point. u_a: x the distance travelled through the stars,
+// y seconds. c1 space, c2 the stars' blue, c3 the ring's cyan and the glow ahead, c4 the red zone.
+const SCENE_WARP = SCENE_HEAD + `uniform vec4 u_a;
+const vec2 C = vec2(960.0, 330.0);
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec2 d = p - C;
+    float r = length(d), a = atan(d.y, d.x) / 6.2831853 + 0.5;
+    vec3 c = u_c1 + u_c2 * 0.08 * (0.5 + 0.5 * sin(p.x * 0.0035 + 1.3 + u_a.y * 0.02) * sin(p.y * 0.006 - 0.7));
+    c += u_c3 * 0.2 * exp(-r / (120.0 + 280.0 * u_v.x));
+    for (int i = 0; i < 3; i++) {
+        float n = 110.0 + 70.0 * float(i);
+        float s = floor(a * n);
+        vec2 hs = vec2(s, float(i) * 17.0);
+        float h = hash(hs);
+        if (h > 0.4) {
+            float ph = fract(hash(hs + 5.0) + u_a.x * (0.5 + 0.5 * h));
+            float rs = 24.0 * exp(ph * 3.9), len = rs * (0.02 + 0.6 * u_v.x);
+            float da = abs(a - (s + 0.25 + 0.5 * hash(hs + 9.0)) / n) * 6.2831853 * r;
+            float w = 0.5 + 1.6 * ph;
+            if (da < w && r < rs && r > rs - len - 1.5)
+                c += mix(u_c2, vec3(1.0), ph) * clamp((r - (rs - len)) / max(len, 1.0), 0.0, 1.0) * (0.35 + 0.65 * ph) * (1.0 - da / w);
+        }
+    }
+    float th = atan(d.x, -d.y), f = (th + 2.3562) / 4.7124;
+    if (r > 232.0 && r < 258.0 && f >= 0.0 && f <= 1.0) {
+        float seg = f * 45.0;
+        if (fract(seg) > 0.16) {
+            vec3 on = f >= u_v.w ? u_c4 : (f < 0.6 ? u_c3 : vec3(1.0));
+            if (u_v.z > 0.5) on = mod(floor(seg), 2.0) < 0.5 ? u_c4 : vec3(1.0);
+            c = f < u_v.y ? on : mix(c, u_c2 * 0.22, 0.85);
+        }
+    }
+    c = mix(c, u_c3 * 0.6, clamp(1.6 - abs(r - 266.0), 0.0, 1.0) * 0.5);
+    c += u_c3 * 0.22 * u_v.z;
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Neon City: a night skyline in two rows that slide past with the speed (lit windows, neon signs that flicker now and
+// then), its reflection rippling in the wet street, lane dashes, slanting rain (more slant the faster); the revs a neon
+// tube along the top. u_a: x the far row's offset (px), y the near row's, z the dashes' phase, w seconds. c1 the night,
+// c2 pink neon, c3 blue neon, c4 the red zone.
+const SCENE_NEON = SCENE_HEAD + `uniform vec4 u_a;
+const float GY = 560.0;
+vec4 city(vec2 p) {
+    vec4 o = vec4(0.0);
+    float x1 = p.x + u_a.x, i1 = floor(x1 / 90.0), h1 = 150.0 + 210.0 * hash(vec2(i1, 1.0));
+    if (p.y > GY - h1) {
+        o = vec4(u_c1 * 1.7 + 0.02, 1.0);
+        vec2 wc = vec2(mod(x1, 90.0), p.y - (GY - h1));
+        vec2 cl = floor(wc / vec2(12.0, 16.0)), wo = wc - cl * vec2(12.0, 16.0);
+        if (wc.x > 8.0 && wc.x < 82.0 && wo.x > 3.0 && wo.x < 9.0 && wo.y > 4.0 && wo.y < 12.0 && hash(cl + i1 * 7.0) > 0.62)
+            o.rgb = mix(vec3(1.0, 0.78, 0.45), u_c3, step(0.8, hash(cl + 3.0))) * 0.5;
+    }
+    float x2 = p.x + u_a.y, i2 = floor(x2 / 160.0), h2 = 90.0 + 230.0 * hash(vec2(i2, 9.0)), lx = mod(x2, 160.0);
+    if (p.y > GY - h2 && lx > 6.0 && lx < 150.0) {
+        o = vec4(u_c1 * 0.7, 1.0);
+        vec2 wc = vec2(lx, p.y - (GY - h2));
+        vec2 cl = floor(wc / vec2(14.0, 18.0)), wo = wc - cl * vec2(14.0, 18.0);
+        if (lx > 14.0 && lx < 142.0 && wo.x > 4.0 && wo.x < 10.0 && wo.y > 5.0 && wo.y < 13.0 && hash(cl + i2 * 13.0) > 0.7)
+            o.rgb = vec3(1.0, 0.8, 0.5) * 0.65;
+        float hs = hash(vec2(i2, 4.0));
+        if (hs > 0.45) {
+            float on = step(0.07, hash(vec2(i2, floor(u_a.w * 9.0))));
+            vec3 nc = hs > 0.72 ? u_c2 : u_c3;
+            vec2 q = vec2(lx - (24.0 + 90.0 * hash(vec2(i2, 5.0))), wc.y - 26.0);
+            float db = max(abs(q.x - 7.0) - 7.0, abs(q.y - 55.0) - 55.0);
+            if (db < 0.0) o.rgb = nc * (0.35 + 0.65 * on) * (abs(q.x - 7.0) < 3.0 ? 1.25 : 0.6);
+            else o.rgb += nc * on * 0.6 * exp(-db / 9.0);
+        }
+    }
+    return o;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec3 sky = mix(u_c1 * 0.5, u_c1 * 2.4 + u_c2 * 0.07, smoothstep(0.0, GY, p.y));
+    vec3 c = sky;
+    if (p.y < GY) { vec4 b = city(p); if (b.a > 0.5) c = b.rgb; }
+    else {
+        float ry = 2.0 * GY - p.y + 4.0 * sin(p.y * 0.35 + u_a.w * 5.0);
+        vec4 b = city(vec2(p.x + 3.0 * sin(p.y * 0.2 + u_a.w * 3.0), ry));
+        c = vec3(0.02, 0.02, 0.05) + (b.a > 0.5 ? b.rgb : u_c1 * 2.0) * 0.35 * (1.0 - (p.y - GY) / 170.0);
+        if (abs(p.y - 650.0) < 3.0 && fract(p.x / 120.0 + u_a.z) < 0.5) c = mix(c, vec3(0.85, 0.85, 0.75), 0.7);
+    }
+    vec2 t = p - vec2(560.0, 122.0);
+    if (t.x > -10.0 && t.x < 810.0 && t.y > -10.0 && t.y < 26.0) {
+        float f = clamp(t.x / 800.0, 0.0, 1.0);
+        float dt = max(abs(t.y - 8.0) - 4.0, max(-t.x, t.x - 800.0));
+        vec3 on = f >= u_v.w ? u_c4 : mix(u_c2, u_c3, f);
+        if (u_v.z > 0.5) on = u_c4;
+        bool lit = f < u_v.y;
+        c = mix(c, lit ? on : u_c2 * 0.2, clamp(1.0 - dt, 0.0, 1.0));
+        if (lit) c += on * 0.5 * exp(-max(dt, 0.0) / 5.0);
+    }
+    float sl = 0.12 + 0.6 * u_v.x;
+    vec2 rq = vec2(p.x + p.y * sl, p.y - u_a.w * 900.0);
+    float rh = hash(vec2(floor(rq.x / 13.0), 2.0));
+    if (fract((rq.y + rh * 997.0) / (130.0 + 80.0 * rh)) < 0.14 && abs(mod(rq.x, 13.0) - 6.5) < 0.6) c += vec3(0.5, 0.55, 0.7) * 0.32;
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Jet HUD: green lines on black as a fighter's head-up display. The pitch ladder tilts with the cornering force and
+// moves with braking and accelerating; the flight path marker in the middle; a bank scale above with its caret; a speed
+// tape on the left and a rev tape on the right whose ticks scroll with the value (red from the redline), each with a box
+// for its number (text on top); corner brackets. Everything bright at the shift point. u_g: x / y the g; u_b: x km/h,
+// y rpm / 100, z the redline / 100. c1 the green, c2 its flash, c3 red, c4 the background.
+const SCENE_JET = SCENE_HEAD + `uniform vec4 u_g;
+uniform vec4 u_b;
+const vec2 C = vec2(960.0, 380.0);
+float ln(float d, float w) { return clamp(w + 0.5 - d, 0.0, 1.0) + 0.22 * exp(-max(d - w, 0.0) / 3.0); }
+float box(vec2 p, vec4 b) { vec2 q = abs(p - b.xy - b.zw * 0.5) - b.zw * 0.5; return abs(max(q.x, q.y)); }
+float tape(vec2 p, float x, float v, float side) {
+    if (p.y < 170.0 || p.y > 590.0) return 0.0;
+    float fade = smoothstep(170.0, 230.0, p.y) * smoothstep(590.0, 530.0, p.y);
+    float g = ln(abs(p.x - x), 1.0) * fade;
+    float vt = v + (380.0 - p.y) / 4.0, k = floor(vt / 5.0 + 0.5);
+    float dy = abs(vt - k * 5.0) * 4.0, len = mod(k, 2.0) < 0.5 ? 26.0 : 14.0;
+    float dx = (x - p.x) * side;
+    if (dx > 0.0 && dx < len) g = max(g, ln(dy, 0.9) * fade);
+    return g;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c = u_c4 * (1.0 - 0.5 * smoothstep(300.0, 1000.0, length(p - C)));
+    float g = 0.0, red = 0.0;
+    float bank = clamp(-u_g.x * 0.55, -0.6, 0.6);
+    if (abs(p.x - C.x) < 520.0 && p.y > 150.0 && p.y < 640.0) {
+        vec2 q = p - C;
+        q = vec2(q.x * cos(bank) + q.y * sin(bank), -q.x * sin(bank) + q.y * cos(bank));
+        q.y -= clamp(u_g.y, -1.2, 1.2) * 110.0;
+        float k = floor(q.y / 90.0 + 0.5), dy = q.y - k * 90.0, ax = abs(q.x);
+        if (k == 0.0) { if (ax > 60.0 && ax < 500.0) g = max(g, ln(abs(dy), 1.2)); }
+        else if (abs(k) <= 3.0 && ax > 70.0 && ax < 250.0) {
+            if (!(k > 0.0 && fract(ax / 26.0) > 0.6)) g = max(g, ln(abs(dy), 0.9));
+            float ty = -sign(k) * dy;
+            if (ax > 240.0 && ty >= -1.0 && ty < 14.0) g = max(g, ln(abs(ax - 248.0), 0.9));
+        }
+    }
+    vec2 m = p - C;
+    float rr = length(m);
+    g = max(g, ln(abs(rr - 13.0), 1.0));
+    if (abs(m.x) > 13.0 && abs(m.x) < 42.0) g = max(g, ln(abs(m.y), 1.0));
+    if (m.y < -13.0 && m.y > -27.0) g = max(g, ln(abs(m.x), 1.0));
+    float ba = atan(m.x, -m.y);
+    if (abs(ba) < 0.72 && m.y < 0.0) {
+        g = max(g, ln(abs(rr - 330.0), 1.0));
+        float tk = abs(ba - floor(ba / 0.1745 + 0.5) * 0.1745) * rr;
+        if (abs(ba) < 0.55 && rr > 330.0 && rr < (abs(mod(floor(ba / 0.1745 + 0.5), 3.0)) < 0.5 ? 350.0 : 342.0)) g = max(g, ln(tk, 0.9));
+        if (rr > 304.0 && rr < 322.0 && abs(ba - bank) * rr < (rr - 304.0) * 0.6) g = 1.0;
+    }
+    g = max(g, tape(p, 360.0, u_b.x, 1.0));
+    float rt = tape(p, 1560.0, u_b.y, -1.0);
+    if (u_b.y + (380.0 - p.y) / 4.0 >= u_b.z) red = rt;
+    else g = max(g, rt);
+    g = max(g, ln(box(p, vec4(212.0, 348.0, 144.0, 64.0)), 1.0));
+    g = max(g, ln(box(p, vec4(1564.0, 348.0, 156.0, 64.0)), 1.0));
+    vec2 bq = abs(p - C) - vec2(600.0, 300.0);
+    if ((abs(bq.x) < 1.5 && bq.y > -40.0 && bq.y < 1.5) || (abs(bq.y) < 1.5 && bq.x > -40.0 && bq.x < 1.5)) g = max(g, 1.0);
+    vec3 col = mix(c, u_v.z > 0.5 ? u_c2 : u_c1, clamp(g, 0.0, 1.0));
+    col = mix(col, u_c3, clamp(red, 0.0, 1.0));
+    gl_FragColor = vec4(col * u_dim, 1.0);
+}
+`;
+
+// Paper: warm paper with a faint grain, as an e-ink page; one hairline with a tick each thousand rpm, inked thick up to
+// the revs and in red ink from the redline (all red at the shift point). Nothing else moves. u_b: x the thousands on the
+// scale. c1 the paper, c2 the ink, c3 the red ink, c4 the hairline.
+const SCENE_PAPER = SCENE_HEAD + `uniform vec4 u_b;
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    float n = hash(floor(p / 2.0)) - 0.5;
+    vec3 c = u_c1 * (1.0 + n * 0.035) * (1.0 - 0.06 * smoothstep(500.0, 1100.0, length(p - vec2(960.0, 360.0))));
+    float x0 = 240.0, x1 = 1680.0, y0 = 528.0, f = (p.x - x0) / (x1 - x0);
+    if (f >= 0.0 && f <= 1.0 && abs(p.y - y0) < 16.0) {
+        float dy = abs(p.y - y0);
+        float tk = abs(fract(f * u_b.x + 0.5) - 0.5) * (x1 - x0) / u_b.x;
+        float ink = clamp(1.6 - dy, 0.0, 1.0);
+        if (tk < 1.0 && p.y > y0 - 14.0 && p.y < y0) ink = 1.0;
+        bool lit = f < u_v.y;
+        if (lit) ink = max(ink, clamp(5.5 - dy, 0.0, 1.0));
+        vec3 inkc = f >= u_v.w || (u_v.z > 0.5 && lit) ? u_c3 : u_c2;
+        c = mix(c, lit ? inkc : u_c4, ink);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Four Seasons: a Dutch landscape: the sky, sun, tree line and fields in the season's colours (u_b.x: 0 spring, 1 summer,
+// 2 autumn, 3 winter; u_b.y 1: snowing, below 3 C), a windmill on the horizon turning, fields running past with the speed,
+// and blossom, seeds, leaves or snow blowing by, faster as you drive. Two plates for the text and a slim rev bar at the
+// top. u_a: x seconds, y the wind's offset (px), z the fields' phase. c1 the plates, c2 the lit revs, c3 red, c4 the mill.
+const SCENE_SEASONS = SCENE_HEAD + `uniform vec4 u_a;
+uniform vec4 u_b;
+const float HZ = 470.0;
+vec3 pick(float s, vec3 a, vec3 b, vec3 c, vec3 d) { return s < 0.5 ? a : (s < 1.5 ? b : (s < 2.5 ? c : d)); }
+float rbox(vec2 p, vec4 b, float r) { vec2 q = abs(p - b.xy - b.zw * 0.5) - b.zw * 0.5 + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    float s = u_b.y > 0.5 ? 3.0 : u_b.x;
+    vec3 low = pick(s, vec3(0.86, 0.94, 0.98), vec3(0.66, 0.86, 1.0), vec3(0.95, 0.78, 0.60), vec3(0.86, 0.89, 0.92));
+    vec3 c = mix(pick(s, vec3(0.45, 0.72, 0.96), vec3(0.16, 0.50, 0.94), vec3(0.42, 0.55, 0.72), vec3(0.58, 0.64, 0.72)), low, smoothstep(0.0, HZ, p.y));
+    vec2 sc = vec2(820.0, s > 1.5 ? 300.0 : 210.0);
+    vec3 sunc = pick(s, vec3(1.0, 0.95, 0.75), vec3(1.0, 0.97, 0.8), vec3(1.0, 0.72, 0.4), vec3(1.0, 0.98, 0.92));
+    float sd = length(p - sc);
+    c = mix(c, sunc, clamp(44.0 - sd, 0.0, 1.0)) + sunc * 0.22 * exp(-max(sd - 44.0, 0.0) / 60.0);
+    float tx = p.x + u_a.y * 0.1;
+    float th = 26.0 + 16.0 * sin(tx * 0.013) + 10.0 * sin(tx * 0.031 + 1.7) + 9.0 * abs(sin(tx * 0.07));
+    vec3 tree = pick(s, vec3(0.50, 0.72, 0.36), vec3(0.24, 0.52, 0.25), mix(vec3(0.80, 0.44, 0.16), vec3(0.62, 0.30, 0.14), step(0.5, fract(tx * 0.011))), vec3(0.45, 0.43, 0.44));
+    if (p.y > HZ - th && p.y <= HZ) c = tree * (0.82 + 0.18 * (p.y - (HZ - th)) / th);
+    vec2 wq = p - vec2(1180.0, HZ - 150.0);
+    if (wq.y > 0.0 && wq.y < 150.0 && abs(wq.x) < 8.0 + 10.0 * wq.y / 150.0) c = u_c4;
+    for (int k = 0; k < 4; k++) {
+        float aa = u_a.x * 0.8 + float(k) * 1.5708;
+        vec2 dr = vec2(cos(aa), sin(aa));
+        float al = dot(wq, dr), ac = dot(wq, vec2(-dr.y, dr.x));
+        if (al > 6.0 && al < 95.0 && ac > 0.0 && ac < 13.0) c = u_c4 * (mod(floor(al / 9.0), 2.0) < 0.5 ? 1.0 : 1.6) + 0.06;
+    }
+    if (length(wq) < 6.0) c = u_c4;
+    if (p.y > HZ) {
+        float y = p.y - HZ, z = 2600.0 / y;
+        float fz = z / 60.0 + u_a.z, hb = hash(vec2(floor(fz), 3.0));
+        vec3 f1 = pick(s, vec3(0.92, 0.22, 0.26), vec3(0.36, 0.66, 0.24), vec3(0.50, 0.34, 0.20), vec3(0.94, 0.96, 0.98));
+        vec3 f2 = pick(s, vec3(0.98, 0.82, 0.22), vec3(0.86, 0.74, 0.30), vec3(0.66, 0.46, 0.24), vec3(0.86, 0.90, 0.95));
+        vec3 f3 = pick(s, vec3(0.95, 0.52, 0.72), vec3(0.28, 0.56, 0.20), vec3(0.44, 0.30, 0.18), vec3(0.92, 0.94, 0.97));
+        vec3 gr = pick(s, vec3(0.42, 0.72, 0.30), vec3(0.32, 0.62, 0.22), vec3(0.52, 0.50, 0.26), vec3(0.90, 0.93, 0.96));
+        c = hb < 0.3 ? f1 : (hb < 0.55 ? f2 : (hb < 0.75 ? f3 : gr));
+        if (s < 2.5 && fract((p.x - 960.0) / y * 3.0) < 0.35) c *= 0.86;
+        float fr = fract(fz);
+        if (min(fr, 1.0 - fr) * 60.0 < 2600.0 / (y * y) * 1.3) c = s > 2.5 ? vec3(0.75, 0.84, 0.92) : vec3(0.36, 0.56, 0.74);
+        c = mix(low * 0.92, c, smoothstep(0.0, 36.0, y));
+    }
+    for (int L = 0; L < 2; L++) {
+        float fl = float(L), sz = 70.0 - 24.0 * fl;
+        vec2 q = p + vec2(u_a.y * (0.6 + 0.4 * fl), -u_a.x * (s > 2.5 ? 70.0 : 34.0) * (0.7 + 0.5 * fl));
+        q.x += 14.0 * sin(q.y * 0.02 + u_a.x * 1.3 + fl);
+        vec2 cl = floor(q / sz);
+        float h = hash(cl + fl * 31.0);
+        if (h > (s > 2.5 ? 0.25 : (s > 1.5 ? 0.55 : (s > 0.5 ? 0.88 : 0.55)))) {
+            vec2 d = q - (cl + 0.2 + 0.6 * vec2(hash(cl + 4.0), hash(cl + 9.0))) * sz;
+            float rot = h * 6.28 + u_a.x * (1.0 + h), sc2 = 1.0 - 0.3 * fl;
+            vec2 r = vec2(d.x * cos(rot) - d.y * sin(rot), d.x * sin(rot) + d.y * cos(rot)) / sc2;
+            float m;
+            vec3 pc;
+            if (s > 2.5) { m = clamp(3.2 * sc2 - length(d) + 0.5, 0.0, 1.0); pc = vec3(1.0); }
+            else if (s > 1.5) { m = clamp((1.0 - length(r / vec2(8.0, 4.5))) * 4.0, 0.0, 1.0); pc = mix(vec3(0.92, 0.42, 0.10), vec3(0.75, 0.18, 0.10), hash(cl + 2.0)); }
+            else if (s > 0.5) { m = clamp(2.2 * sc2 - length(d) + 0.5, 0.0, 1.0); pc = vec3(1.0, 1.0, 0.92); }
+            else { m = clamp((1.0 - length(r / vec2(6.0, 3.5))) * 4.0, 0.0, 1.0); pc = vec3(1.0, 0.72, 0.84); }
+            c = mix(c, pc, m * (0.95 - 0.2 * fl));
+        }
+    }
+    if (rbox(p, vec4(120.0, 150.0, 470.0, 250.0), 22.0) < 0.0 || rbox(p, vec4(1330.0, 150.0, 470.0, 250.0), 22.0) < 0.0) c = mix(c, u_c1, 0.62);
+    vec2 rb = p - vec2(700.0, 128.0);
+    if (rbox(p, vec4(700.0, 128.0, 520.0, 12.0), 6.0) < 0.0) {
+        float f = rb.x / 520.0;
+        vec3 on = f >= u_v.w || u_v.z > 0.5 ? u_c3 : u_c2;
+        c = f < u_v.y ? on : mix(c, u_c1, 0.55);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Chronograph: two luxury-watch dials on a sunburst face, speed (0 to 260 km/h) on the left and revs (0 to 8000) on the
+// right, polished bezels, applied indices, sword hands with lume (glowing green at night), a red zone from the redline; a
+// fuel sub-dial and a small seconds sub-dial running on the real time. The gear sits in a date window between them (text).
+// u_b: x km/h, y rpm / 1000, z the redline / 1000, w fuel 0..1; u_a: x lume (1 at night), y seconds (0..60).
+// c1 the case, c2 steel, c3 the dial's blue, c4 red.
+const SCENE_CHRONO = SCENE_HEAD + `uniform vec4 u_a;
+uniform vec4 u_b;
+const float R = 290.0;
+vec3 hand(vec2 d, float ang, float len, float w0, vec3 c, float lume, inout float hit) {
+    vec2 dir = vec2(sin(ang), -cos(ang)), pp = vec2(dir.y, -dir.x);
+    float al = dot(d, dir), ac = dot(d, pp);
+    float w = mix(w0, 1.5, clamp(al / len, 0.0, 1.0));
+    if (al > -40.0 && al < len && abs(ac) < w) {
+        hit = 1.0;
+        vec3 steel = u_c2 * (ac > 0.0 ? 1.0 : 0.62);
+        if (al > len - 34.0) return u_c4;
+        if (al > 30.0 && al < len - 40.0 && abs(ac) < w * 0.45) return mix(vec3(0.86, 0.9, 0.84), vec3(0.45, 1.0, 0.6), lume);
+        return steel;
+    }
+    return c;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    float left = p.x < 960.0 ? 1.0 : 0.0;
+    vec2 C = left > 0.5 ? vec2(500.0, 370.0) : vec2(1420.0, 370.0);
+    vec2 d = p - C;
+    float r = length(d), th = atan(d.x, -d.y);
+    float ga = atan(p.x - 960.0, -(p.y - 360.0));
+    vec3 c = u_c1 * (0.85 + 0.12 * sin(ga * 220.0) * 0.3 + 0.15 * cos(ga * 2.0 + 0.7)) * (1.0 - 0.35 * smoothstep(400.0, 1100.0, length(p - vec2(960.0, 360.0))));
+    vec2 wq = abs(p - vec2(960.0, 386.0)) - vec2(70.0, 34.0);
+    float wd = max(wq.x, wq.y);
+    if (wd < 6.0) c = u_c2 * 0.8;                                        // the date window: a steel frame, white inside
+    if (wd < 0.0) c = vec3(0.96, 0.96, 0.94) * (1.0 - 0.18 * smoothstep(-8.0, 0.0, wd) * step(p.y, 360.0));
+    if (r < R + 20.0) {
+        if (r > R) c = u_c2 * (0.5 + 0.38 * cos(th + 0.8)) * (0.9 + 0.1 * step(0.5, fract(th * 60.0)));
+        else {
+            c = u_c3 * (0.78 + 0.22 * cos(2.0 * (th + 0.6))) * (1.0 + 0.04 * sin(th * 180.0));
+            float lume = u_a.x;
+            float f = (th + 2.3562) / 4.7124;
+            bool onScale = f >= 0.0 && f <= 1.0;
+            float vmax = left > 0.5 ? 260.0 : 8.0, minor = left > 0.5 ? 5.0 : 0.25, major = left > 0.5 ? 20.0 : 1.0;
+            float v = f * vmax;
+            float px = 4.7124 / vmax * r;                 // px per unit at this radius
+            float dm = abs(v - floor(v / minor + 0.5) * minor) * px, dM = abs(v - floor(v / major + 0.5) * major) * px;
+            if (onScale && r > R - 30.0 && r < R - 20.0 && dm < 1.0) c = vec3(0.9);
+            if (onScale && left < 0.5 && r > R - 30.0 && r < R - 20.0 && v >= u_b.z) c = u_c4 * (dm < 1.0 ? 1.2 : 0.85);
+            if (onScale && r > R - 64.0 && r < R - 34.0 && dM < 4.0) c = mix(u_c2 * (dM < 1.5 ? 1.1 : 0.7), vec3(0.45, 1.0, 0.6), lume * 0.6);
+            vec2 S = C + vec2(0.0, 140.0), sd = p - S;
+            float sr = length(sd), sth = atan(sd.x, -sd.y);
+            if (sr < 66.0) {
+                c = u_c3 * 0.62 * (1.0 + 0.08 * sin(sr * 1.3));
+                if (sr > 58.0 && sr < 62.0 && abs(fract(sth / 0.5236 + 0.5) - 0.5) * 0.5236 * sr < 1.2) c = vec3(0.85);
+                float sa = left > 0.5 ? -1.5708 + 3.1416 * u_b.w : u_a.y / 60.0 * 6.2832;
+                float hs = 0.0;
+                c = hand(sd, sa, 52.0, 3.0, c, lume, hs);
+                if (sr < 5.0) c = u_c2;
+                if (left > 0.5 && u_b.w < 0.15 && sr > 58.0 && sr < 62.0 && sth < -1.0) c = u_c4;
+            }
+            float hit = 0.0;
+            float va = left > 0.5 ? clamp(u_b.x / 260.0, 0.0, 1.0) : clamp(u_b.y / 8.0, 0.0, 1.0);
+            c = hand(d, -2.3562 + 4.7124 * va, R - 44.0, 9.0, c, lume, hit);
+            if (r < 16.0) c = u_c2 * (0.65 + 0.35 * cos(th + 0.8));
+            if (r < 5.0) c = u_c1;
+            if (left < 0.5 && u_v.z > 0.5 && r > R - 34.0) c = mix(c, u_c4, 0.55);
+        }
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Aurora: northern lights rippling over snowy mountains and a still lake that mirrors them, pines along the shore. The
+// lights grow brighter and livelier with the revs; the mountains drift by with the speed; the revs also light a line across
+// the lake, aurora green to violet, red from the redline. u_a: x the lights' clock (faster with the revs), y the mountains'
+// offset, z seconds. c1 the night, c2 aurora green, c3 aurora violet, c4 red.
+const SCENE_AURORA = SCENE_HEAD + `uniform vec4 u_a;
+const float HZ = 468.0;
+vec3 lights(vec2 p, float glow) {
+    vec3 o = vec3(0.0);
+    for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        float yc = 150.0 + 46.0 * fk + 52.0 * sin(p.x * 0.004 + u_a.x * 0.15 * (1.0 + fk * 0.3) + fk * 1.7) + 18.0 * sin(p.x * 0.011 - u_a.x * 0.21 + fk);
+        float dy = p.y - yc;
+        float a = dy < 0.0 ? exp(dy / (80.0 + 30.0 * fk)) : exp(-dy / 10.0);
+        float rays = 0.55 + 0.45 * sin(p.x * 0.07 + 4.0 * sin(p.x * 0.013 + u_a.x * 0.3 + fk));
+        vec3 col = mix(u_c2, u_c3, clamp(-dy / 140.0, 0.0, 1.0));
+        o += col * a * rays * (0.55 - 0.12 * fk);
+    }
+    return o * glow;
+}
+float tri(float x) { return 1.0 - abs(fract(x) * 2.0 - 1.0); }
+float ridge(float x) { return HZ - 8.0 - 120.0 * tri(x / 560.0) - 62.0 * tri(x / 236.0 + 0.3) - 22.0 * tri(x / 88.0 + 0.6); }
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    float glow = 0.55 + 0.75 * u_v.y;
+    vec3 c;
+    vec2 q = p.y < HZ ? p : vec2(p.x + 2.5 * sin(p.y * 0.5 + u_a.z * 1.6), 2.0 * HZ - p.y);
+    c = mix(u_c1 * 0.5, u_c1 * 1.6, smoothstep(0.0, HZ, q.y));
+    vec2 cl = floor(q / 30.0);
+    float h = hash(cl);
+    if (h > 0.8) c += vec3(smoothstep(1.4, 0.0, length(q - cl * 30.0 - 5.0 - 20.0 * vec2(hash(cl + 2.0), hash(cl + 5.0)))) * (0.5 + 0.5 * sin(u_a.z * (1.0 + h * 2.0) + h * 30.0)));
+    c += lights(q, glow);
+    float mx = q.x + u_a.y, top = ridge(mx);
+    if (q.y > top) {
+        float hgt = HZ - top, line = top + 0.42 * hgt + 7.0 * sin(q.x * 0.21) + 4.0 * sin(q.x * 0.57);
+        float facet = step(0.5, fract((q.x + u_a.y) / 236.0 + 0.3));        // one side of each peak in shade
+        vec3 rock = vec3(0.10, 0.14, 0.20) * (0.75 + 0.5 * facet) + u_c2 * 0.03 * glow;
+        vec3 snow = (vec3(0.70, 0.78, 0.88) + u_c2 * 0.1 * glow) * (0.7 + 0.3 * facet);
+        c = q.y < line ? snow : rock;
+    }
+    float px = mod(q.x + u_a.y * 1.6, 26.0), ph = 10.0 + 14.0 * hash(vec2(floor((q.x + u_a.y * 1.6) / 26.0), 1.0));
+    if (q.y > HZ - ph + abs(px - 13.0) * 1.6 && q.y <= HZ) c = u_c1 * 0.4;
+    if (p.y >= HZ) c = mix(c * 0.55, u_c1 * 0.5, 0.25) + vec3(0.0, 0.01, 0.03);
+    vec2 t = p - vec2(360.0, 604.0);
+    if (t.x > -8.0 && t.x < 1208.0 && abs(t.y) < 10.0) {
+        float f = clamp(t.x / 1200.0, 0.0, 1.0), dd = max(abs(t.y) - 1.5, max(-t.x, t.x - 1200.0));
+        bool lit = f < u_v.y;
+        vec3 on = f >= u_v.w || u_v.z > 0.5 ? u_c4 : mix(u_c2, u_c3, f);
+        c = mix(c, lit ? on : u_c1 * 2.2, clamp(1.0 - dd, 0.0, 1.0));
+        if (lit) c += on * 0.4 * exp(-max(dd, 0.0) / 4.0);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Light Trails: a long-exposure photo of a highway at night: white headlight trails coming, red tail-light trails going,
+// all running to the city glowing on the horizon, street lamps passing as soft orbs and lane dashes rushing by; longer,
+// brighter streaks the faster you go. The revs a white-to-red light streak at the top. u_a: x the traffic's clock (faster
+// with the speed), y the dashes' phase, z seconds. c1 the night, c2 headlights, c3 tail lights, c4 lamps' orange.
+const SCENE_TRAILS = SCENE_HEAD + `uniform vec4 u_a;
+const vec2 VP = vec2(960.0, 300.0);
+float trail(vec2 p, float bx, float seed) {
+    float t = (p.y - VP.y) / (720.0 - VP.y);
+    if (t <= 0.0) return 0.0;
+    float x = VP.x + (bx - VP.x) * t, w = 0.8 + 7.0 * t;
+    float d = abs(p.x - x);
+    if (d > w * 3.0) return 0.0;
+    float z = 1.0 / t;
+    float run = 0.25 + 0.75 * smoothstep(0.0, 0.2 + 0.65 * u_v.x, fract(z * 0.22 - u_a.x * (1.0 + seed * 0.4) + seed));
+    return (clamp(w - d + 0.5, 0.0, 1.0) + 0.35 * exp(-d / (w * 1.2))) * run * smoothstep(0.0, 0.08, t);
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c = mix(u_c1 * 0.5, u_c1 * 2.0 + u_c3 * 0.05, smoothstep(0.0, VP.y, p.y));
+    if (p.y < VP.y + 20.0 && p.y > VP.y - 90.0) {
+        vec2 cl = floor(p / 34.0);
+        float h = hash(cl);
+        if (h > 0.45) {
+            vec2 bc = cl * 34.0 + 17.0 + 10.0 * (vec2(hash(cl + 3.0), hash(cl + 6.0)) - 0.5);
+            float rad = 5.0 + 10.0 * hash(cl + 9.0);
+            vec3 bk = h > 0.8 ? u_c4 : (h > 0.62 ? u_c2 * 0.8 : vec3(0.5, 0.6, 1.0));
+            c += bk * 0.35 * smoothstep(rad, rad - 2.0, length(p - bc)) * (1.0 - abs(p.y - VP.y + 30.0) / 90.0);
+        }
+    }
+    if (p.y > VP.y) {
+        float t = (p.y - VP.y) / (720.0 - VP.y);
+        c = mix(vec3(0.03, 0.03, 0.05), vec3(0.06, 0.06, 0.08), t);
+        float z = 1.0 / t;
+        for (int k = -1; k <= 1; k += 2) {
+            float lx = VP.x + float(k) * 260.0 * t;
+            if (abs(p.x - lx) < 0.6 + 3.0 * t && fract(z * 0.5 - u_a.y) < 0.45) c += vec3(0.5) * smoothstep(0.0, 0.1, t);
+        }
+        c += u_c2 * (trail(p, 90.0, 0.0) + 0.9 * trail(p, 360.0, 0.37) + 0.75 * trail(p, 620.0, 0.83));
+        c += u_c3 * (0.75 * trail(p, 1300.0, 0.52) + 0.9 * trail(p, 1560.0, 0.71) + trail(p, 1830.0, 0.13));
+    }
+    for (int i = 0; i < 5; i++) {
+        float z = 1.0 + 9.0 * fract((float(i) + u_a.x * 1.4) / 5.0);
+        float s = 1.0 / z;
+        vec2 L1 = VP + vec2(-1150.0, -330.0) * s, L2 = VP + vec2(1150.0, -330.0) * s;
+        float rad = 4.0 + 40.0 * s;
+        float b = smoothstep(rad, rad * 0.4, length(p - L1)) + smoothstep(rad, rad * 0.4, length(p - L2));
+        c += u_c4 * b * 0.55 * smoothstep(10.0, 6.0, z);
+    }
+    vec2 r = p - vec2(640.0, 128.0);
+    if (r.x > -10.0 && r.x < 650.0 && abs(r.y) < 12.0) {
+        float f = clamp(r.x / 640.0, 0.0, 1.0), dd = max(abs(r.y) - 2.0, max(-r.x, r.x - 640.0));
+        bool lit = f < u_v.y;
+        vec3 on = f >= u_v.w || u_v.z > 0.5 ? u_c3 : mix(u_c2, u_c3 * 1.2, f * f);
+        c = mix(c, lit ? on : u_c1 * 2.5, clamp(1.0 - dd, 0.0, 1.0));
+        if (lit) c += on * 0.45 * exp(-max(dd, 0.0) / 5.0);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Neon Falls: a purple neon city at night with three glowing waterfalls (one off a floating island) falling into a lagoon
+// that mirrors it all, drawn on a 480 x 180 grid (4 x 4 panel px a pixel) for a pixel-art look: a banded sky, a crescent
+// moon, stars, drifting clouds, a far skyline that slides by with the speed, tall towers with lit windows and neon edges,
+// trees and vines on the ledges, flying cars streaking across faster the faster you drive. The water always flows,
+// rushing faster and glowing brighter with the revs and surging white at the shift point; splashes, mist, ripples. Two
+// plates for the text and a neon rev bar over the lagoon. u_a: x the water's clock, y the flying cars' clock, z seconds,
+// w the skyline's offset. c1 the night, c2 the water's cyan, c3 neon pink, c4 the leaves' green.
+const SCENE_FALLS = SCENE_HEAD + `uniform vec4 u_a;
+const float WL = 140.0;
+vec3 sky(vec2 p) {
+    float t = clamp(p.y / 120.0, 0.0, 1.0) * 9.0, band = floor(t);
+    if (fract(t) > 0.5 && mod(p.x + p.y, 2.0) < 0.5) band += 1.0;
+    vec3 c = mix(u_c1 * 0.7, u_c1 * 2.4 + u_c3 * 0.22, min(band, 9.0) / 9.0);
+    vec2 cl = floor(p / 9.0);
+    float h = hash(cl);
+    if (h > 0.9 && p.y < 90.0 && length(p - cl * 9.0 - 2.0 - 5.0 * vec2(hash(cl + 3.0), hash(cl + 8.0))) < 0.8)
+        c += vec3(0.8) * (0.4 + 0.6 * step(0.5, fract(h * 9.0 + u_a.z * (0.2 + h))));
+    float md = length(p - vec2(322.0, 22.0)), mc = length(p - vec2(326.0, 19.0));
+    if (md < 9.0 && mc > 8.0) c = vec3(0.96, 0.94, 0.84);
+    else c += vec3(0.5, 0.45, 0.8) * 0.18 * exp(-max(md - 9.0, 0.0) / 10.0);
+    float cx = mod(p.x + u_a.z * 1.5, 520.0) - 20.0;
+    for (int k = 0; k < 3; k++) {
+        vec2 cc = vec2(60.0 + 170.0 * float(k), 18.0 + 14.0 * mod(float(k), 2.0));
+        vec2 q = vec2(cx, p.y) - cc;
+        float b = length(q / vec2(26.0, 5.0)) - 1.0 + 0.25 * sin(q.x * 0.35);
+        if (b < 0.0) c = mix(u_c1 * 1.6, u_c3 * 0.35 + u_c1, step(q.y, -1.0) * 0.7);
+    }
+    return c;
+}
+float fall(vec2 p, float x0, float x1, float y0, float y1, float rush) {
+    if (p.x < x0 || p.x >= x1 || p.y < y0 || p.y >= y1) return 0.0;
+    float h = hash(vec2(p.x, 7.0)), mid = (x0 + x1 - 1.0) * 0.5, hw = (x1 - x0) * 0.5;
+    float s = fract((p.y - u_a.x * (46.0 + 30.0 * h)) / (16.0 + 14.0 * h) + h);
+    float b = 0.62 + 0.3 * smoothstep(0.55, 0.9, s) + 0.08 * step(0.5, hash(vec2(p.x, floor((p.y - u_a.x * 60.0) / 3.0))));
+    b *= 1.0 - 0.28 * abs(p.x - mid) / hw;
+    if (p.y - y0 < 3.0 || WL - p.y < 6.0) b = 1.0;
+    return clamp(b * rush, 0.0, 1.25);
+}
+// the waterfall nearest x: its left and right edge, its top, its middle
+vec4 fallAt(float x) { return x < 190.0 ? vec4(128.0, 147.0, 33.0, 137.5) : (x < 290.0 ? vec4(229.0, 252.0, 55.0, 240.5) : vec4(334.0, 353.0, 37.0, 343.5)); }
+vec3 above(vec2 p) {
+    vec3 c = sky(p);
+    float x1 = p.x + u_a.w, i1 = floor(x1 / 18.0), top1 = 118.0 - 22.0 - 50.0 * hash(vec2(i1, 1.0));
+    if (p.y > top1 && p.y < 142.0) {
+        c = u_c1 * 1.9 + vec3(0.03, 0.02, 0.08);
+        vec2 wc = floor(vec2(mod(x1, 18.0), p.y - top1) / 3.0);
+        if (mod(x1, 18.0) > 2.0 && mod(x1, 18.0) < 16.0 && mod(p.x, 3.0) < 1.0 && mod(p.y - top1, 3.0) < 1.0 && hash(wc + i1 * 5.0) > 0.7)
+            c = hash(wc + 2.0) > 0.5 ? u_c2 * 0.8 : u_c3 * 0.8;
+    }
+    float side = p.x < 160.0 ? 1.0 : (p.x > 320.0 ? 2.0 : 0.0);
+    if (side > 0.5) {
+        float i2 = floor(p.x / 26.0), lx = mod(p.x, 26.0);
+        float top2 = 10.0 + 50.0 * hash(vec2(i2, 4.0)) + (side > 1.5 ? 8.0 : 0.0);
+        if (abs(p.x - 137.0) < 16.0) top2 = 32.0;
+        if (abs(p.x - 343.0) < 16.0) top2 = 36.0;
+        if (p.y > top2 && lx > 1.0) {
+            c = u_c1 * 1.15 + vec3(0.02, 0.015, 0.05);
+            if (lx < 3.0) c = hash(vec2(i2, 6.0)) > 0.5 ? u_c2 * 0.7 : u_c3 * 0.75;
+            if (lx > 5.0 && lx < 24.0 && mod(lx, 4.0) < 2.0 && mod(p.y, 5.0) < 2.0 && hash(floor(vec2(lx / 4.0, p.y / 5.0)) + i2 * 9.0) > 0.55)
+                c = mix(vec3(1.0, 0.85, 0.6), u_c2, step(0.6, hash(floor(vec2(lx, p.y) / 4.0) + 1.0))) * 0.85;
+        }
+        float ledge = abs(p.x - 137.0) < 18.0 ? 32.0 : (abs(p.x - 343.0) < 18.0 ? 36.0 : -9.0);
+        if (ledge > 0.0) {
+            float lc = abs(p.x - 137.0) < 18.0 ? 137.0 : 343.0;
+            vec2 q = p - vec2(lc, ledge - 3.0);
+            float tr = length(q / vec2(20.0, 8.0)) - 1.0 + 0.3 * sin(q.x * 0.9) * 0.3;
+            if (tr < 0.0) c = u_c4 * (0.55 + 0.45 * step(q.y, -2.0)) * (0.85 + 0.15 * hash(floor(p / 2.0)));
+            if (p.y > ledge && p.y < ledge + 26.0 && abs(p.x - lc) > 12.0 && abs(p.x - lc) < 19.0 && mod(p.x, 3.0) < 1.0 && hash(vec2(p.x, 2.0)) > 0.35 && p.y < ledge + 8.0 + 18.0 * hash(vec2(p.x, 3.0)))
+                c = u_c4 * 0.7;
+        }
+    }
+    vec2 iq = p - vec2(240.0, 50.0);
+    float isl = iq.y < 0.0 ? length(iq / vec2(36.0, 6.0)) - 1.0 : (abs(iq.x) - 36.0 + iq.y * 3.2);
+    if (isl < 0.0 && iq.y > -8.0 && iq.y < 12.0) c = iq.y < -1.0 ? u_c4 * 0.8 : mix(u_c1 * 2.0, u_c1 * 1.2, iq.y / 12.0);
+    vec2 tq = p - vec2(222.0, 40.0);
+    if (length(tq / vec2(9.0, 6.0)) < 1.0 || length((p - vec2(258.0, 41.0)) / vec2(7.0, 5.0)) < 1.0) c = u_c4 * (0.65 + 0.35 * step(p.y, 39.0));
+    float rush = 0.75 + 0.45 * u_v.y + (u_v.z > 0.5 ? 0.5 : 0.0);
+    vec4 F = fallAt(p.x);
+    float w = fall(p, F.x, F.y, F.z, WL, rush);
+    if (w > 0.0) c = mix(u_c2 * 0.9, vec3(0.95, 1.0, 1.0), clamp((w - 0.55) * 2.2, 0.0, 1.0));
+    else if (p.y > F.z && p.y < WL) c += u_c2 * 0.5 * rush * exp(-max(abs(p.x - F.w) - (F.y - F.x) * 0.5, 0.0) / 7.0);
+    for (int k = 0; k < 3; k++) {
+        float fk = float(k), ly = 62.0 + 13.0 * fk, dir = mod(fk, 2.0) < 0.5 ? 1.0 : -1.0;
+        float x = mod(u_a.y * (60.0 + 25.0 * fk) + 137.0 * fk, 560.0) - 40.0;
+        if (dir < 0.0) x = 480.0 - x;
+        float tl = 3.0 + 22.0 * u_v.x, d = (x - p.x) * dir;
+        if (abs(p.y - ly) < 0.5 && d >= 0.0 && d < tl) c = mix(c, mod(fk, 2.0) < 0.5 ? u_c3 : u_c2, 1.0 - d / tl * 0.85);
+    }
+    return c;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size / 4.0);
+    if (kept(p * 4.0 + 2.0)) { gl_FragColor = vec4(0.0); return; }
+    bool lake = p.y >= WL;
+    float wob = floor(1.5 * sin(p.y * 0.8 + u_a.z * 3.0) + 0.5);
+    vec3 c = above(lake ? vec2(p.x + wob, 2.0 * WL - p.y - 1.0) : p);   // the lagoon mirrors the city, rippling
+    if (lake) {
+        c = c * 0.5 + u_c1 * 0.4;
+        if (hash(floor(vec2((p.x + u_a.z * 4.0) / 6.0, p.y))) > 0.94) c += u_c2 * 0.25;
+    }
+    vec4 F = fallAt(p.x);
+    vec2 q = p - vec2(F.w, WL);
+    if (abs(q.x) < (F.y - F.x) * 0.5 + 5.0 - abs(q.y) * 0.4 && abs(q.y) < 7.0 && hash(floor(vec2(p.x / 2.0, (p.y + u_a.x * 22.0) / 2.0))) > 0.42) c = mix(c, vec3(0.92, 1.0, 1.0), 0.9);
+    c += u_c2 * 0.34 * exp(-length(q / vec2(1.0, 1.4)) / 14.0);
+    vec2 b = p - vec2(165.0, 167.0);
+    if (b.y >= 0.0 && b.y < 4.0 && b.x >= 0.0 && b.x < 170.0 && mod(b.x, 5.0) < 4.0) {
+        float f = (floor(b.x / 5.0) + 0.5) / 34.0;
+        vec3 on = f >= u_v.w ? vec3(1.0, 0.25, 0.3) : mix(u_c2, u_c3, f);
+        if (u_v.z > 0.5) on = vec3(1.0);
+        c = f < u_v.y ? on : u_c1 * 1.8;
+    }
+    vec4 r = p.x < 240.0 ? vec4(24.0, 50.0, 94.0, 64.0) : vec4(362.0, 50.0, 94.0, 64.0);
+    vec2 o = p - r.xy;
+    if (o.x >= 0.0 && o.y >= 0.0 && o.x < r.z && o.y < r.w) {
+        float ex = (o.x < 1.0 || o.x >= r.z - 1.0) ? 1.0 : 0.0, ey = (o.y < 1.0 || o.y >= r.w - 1.0) ? 1.0 : 0.0;
+        if (ex * ey < 0.5) c = ex + ey > 0.5 ? u_c2 : mix(c, u_c1 * 0.5, 0.82);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Cosmic Swim: a chrome astronaut bobbing in a glowing nebula sea under a starry nebula sky, his visor mirroring the
+// pink sea and the stars. The waves roll faster with the speed, the sea and sky glow brighter with the revs, his arms
+// sweep slowly, ripples ring out round him; the sea flashes at the shift point. The revs also fill a slim streak at the top
+// (pink to white, red from the redline). u_a: x the sea's clock (faster with the speed), y seconds. c1 deep space,
+// c2 nebula pink, c3 nebula blue, c4 red.
+const SCENE_SWIM = SCENE_HEAD + `uniform vec4 u_a;
+const float HZ = 300.0;
+vec3 nebula(vec2 p, float glow) {
+    float n = sin(p.x * 0.0042 + 2.0 * sin(p.y * 0.006 + u_a.y * 0.03)) * sin(p.y * 0.0052 + 1.7 * sin(p.x * 0.0031 - u_a.y * 0.02));
+    float m = sin(p.x * 0.011 + p.y * 0.007 + 1.3) * 0.5 + 0.5;
+    return mix(u_c3, u_c2, m) * smoothstep(0.0, 1.0, n * 0.5 + 0.5) * 0.55 * glow;
+}
+// a suit part's shade: a soft sphere-like light from the top left, pink from the sea below, blue from the sky
+vec3 suit(vec2 d, float r, float glow) {
+    vec2 n = d / r;
+    float k = clamp(dot(n, n), 0.0, 1.0);
+    vec3 nn = vec3(n, sqrt(1.0 - k));
+    float lit = 0.5 + 0.5 * dot(nn, normalize(vec3(-0.45, -0.55, 0.7)));
+    vec3 col = vec3(0.86, 0.87, 0.92) * (0.35 + 0.65 * lit);
+    col += u_c2 * glow * 0.35 * smoothstep(0.2, 1.0, n.y) + u_c3 * 0.25 * smoothstep(0.2, 1.0, -n.y);
+    return col + vec3(0.35) * smoothstep(0.93, 1.0, lit);
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    float t = u_a.x, glow = 0.65 + 0.7 * u_v.y + (u_v.z > 0.5 ? 0.6 : 0.0);
+    vec3 c = u_c1 + nebula(p, glow);
+    vec2 cl = floor(p / 22.0);
+    float h = hash(cl);
+    if (h > 0.72) c += vec3(smoothstep(1.5, 0.0, length(p - cl * 22.0 - 3.0 - 16.0 * vec2(hash(cl + 2.0), hash(cl + 5.0)))) * (0.45 + 0.55 * sin(u_a.y * (1.0 + 2.0 * h) + h * 40.0)));
+    float bob = 7.0 * sin(u_a.y * 1.1);
+    if (p.y > HZ) {
+        float y = p.y - HZ, z = 220.0 / y, wx = (p.x - 960.0) / y * 1.6;
+        float near = smoothstep(3.5, 1.0, z);                         // detail only close up; far off it melts into a glow
+        float wave = sin(z * 1.3 - t * 1.4 + 0.9 * sin(wx * 0.7 + t * 0.2)) + 0.5 * sin(z * 2.9 - t * 2.2 + wx * 0.45);
+        vec3 sc = mix(u_c3, u_c2, 0.5 + 0.5 * sin(wx * 0.5 + z * 0.35 + t * 0.15));
+        c = sc * glow * (0.55 + 0.25 * near * wave) * (0.6 + 0.4 * smoothstep(0.0, 140.0, y));
+        c += mix(u_c2, vec3(1.0), 0.35) * smoothstep(0.7, 1.5, wave) * near * 0.35 * glow;
+        c += (u_c2 + vec3(0.3)) * 0.4 * glow * exp(-y / 16.0);           // the far glow on the horizon
+        vec2 sc2 = floor(vec2(p.x, p.y + t * 6.0) / 18.0);                // stars glinting in the water
+        float sh = hash(sc2 + 11.0);
+        if (sh > 0.8) {
+            vec2 sp = sc2 * 18.0 + 3.0 + 12.0 * vec2(hash(sc2 + 2.0), hash(sc2 + 7.0)) - vec2(0.0, t * 6.0);
+            c += vec3(0.95, 0.9, 1.0) * smoothstep(1.2 + y * 0.006, 0.0, length(p - sp)) * (0.5 + 0.5 * sin(u_a.y * 3.0 + sh * 40.0));
+        }
+        float rr = length((p - vec2(960.0, 486.0)) / vec2(1.0, 0.3));
+        c += mix(u_c2, vec3(1.0), 0.45) * 0.3 * glow * smoothstep(0.55, 1.0, sin(rr * 0.085 - u_a.y * 2.4)) * exp(-rr / 280.0) * step(150.0, rr);
+    }
+    vec3 water = c;
+    // the astronaut, chest-deep: helmet, neck ring, torso, shoulders, a chest box, arms resting on the water and sweeping
+    vec2 H = vec2(960.0, 296.0 + bob);
+    float wl = 484.0 + bob * 0.3 + 4.0 * sin(p.x * 0.03 + u_a.y * 2.0);
+    float sw = sin(u_a.y * 0.9);
+    vec2 q = p - H;
+    vec3 body = vec3(-1.0);
+    vec2 tq = abs(q - vec2(0.0, 176.0)) - vec2(96.0, 60.0);
+    float torso = length(max(tq, 0.0)) + min(max(tq.x, tq.y), 0.0) - 60.0;
+    if (torso < 0.0) body = suit((q - vec2(0.0, 196.0)) * vec2(0.8, 1.0), 170.0, glow);
+    for (int k = -1; k <= 1; k += 2) {
+        float fk = float(k);
+        vec2 S = vec2(fk * 138.0, 150.0), E = vec2(fk * (250.0 + 14.0 * sw * fk), 196.0 + 8.0 * sw), W = vec2(fk * (330.0 + 20.0 * sw * fk), 214.0);
+        vec2 a = q - S, b = E - S;
+        float d1 = length(a - b * clamp(dot(a, b) / dot(b, b), 0.0, 1.0)) - 38.0;
+        vec2 a2 = q - E, b2 = W - E;
+        float d2 = length(a2 - b2 * clamp(dot(a2, b2) / dot(b2, b2), 0.0, 1.0)) - 32.0;
+        if (min(d1, d2) < 0.0) body = suit(q - (d1 < d2 ? S + b * clamp(dot(a, b) / dot(b, b), 0.0, 1.0) : E) + vec2(0.0, 6.0), 40.0, glow) * 0.92;
+        float sd = length(q - S) - 58.0;
+        if (sd < 0.0) body = suit(q - S, 58.0, glow);
+    }
+    vec2 bq = abs(q - vec2(0.0, 166.0)) - vec2(44.0, 30.0);
+    if (max(bq.x, bq.y) < 0.0) {
+        body = vec3(0.62, 0.64, 0.7) * (0.8 + 0.2 * step(0.0, q.y - 150.0));
+        if (length(q - vec2(-22.0, 160.0)) < 6.0) body = vec3(1.0, 0.25, 0.3);
+        if (length(q - vec2(0.0, 160.0)) < 6.0) body = u_c3 * 1.4;
+        if (length(q - vec2(22.0, 160.0)) < 6.0) body = vec3(0.4, 1.0, 0.6);
+    }
+    float nr = length((q - vec2(0.0, 98.0)) / vec2(78.0, 20.0));
+    if (nr < 1.0) body = vec3(0.5, 0.52, 0.58) * (0.7 + 0.3 * (1.0 - nr));
+    if (body.r >= 0.0) {
+        c = body;
+        if (p.y > wl) c = mix(water, c * 0.6 + u_c2 * 0.25 * glow, 0.3 * smoothstep(wl + 90.0, wl, p.y));
+        else if (p.y > wl - 3.0) c = mix(c, vec3(1.0, 0.85, 0.97), 0.7);
+    }
+    float hr = length(q);
+    if (hr < 100.0) {
+        c = suit(q, 100.0, glow);
+        vec2 vq = (q - vec2(0.0, 10.0)) / vec2(78.0, 64.0);
+        float vr = length(vq);
+        if (vr < 1.0) {
+            float horizon = 0.15 - 0.22 * vq.x * vq.x;
+            vec3 refl = vq.y > horizon ? mix(u_c3, u_c2, 0.5 + 0.5 * sin(vq.x * 5.0 + u_a.y * 0.6)) * glow * (0.85 + 0.35 * smoothstep(0.6, 1.0, sin(vq.y * 22.0 - t * 2.0))) : u_c1 * 1.4 + nebula(p * 2.3, glow) * 0.9;
+            if (vq.y < horizon && hash(floor(vq * 40.0)) > 0.93) refl += vec3(0.7);
+            c = refl * (0.7 + 0.3 * (1.0 - vr * vr));
+            if (abs(length(vq - vec2(-0.12, 0.3)) - 0.8) < 0.03 && vq.y < -0.15 && vq.x < 0.25) c += vec3(0.55);
+            if (vr > 0.92) c = vec3(0.86, 0.72, 0.44) * (0.6 + 0.4 * (vq.y < 0.0 ? 1.0 : 0.6));
+        }
+    }
+    vec2 r = p - vec2(640.0, 128.0);
+    if (r.x > -10.0 && r.x < 650.0 && abs(r.y) < 12.0) {
+        float f = clamp(r.x / 640.0, 0.0, 1.0), dd = max(abs(r.y) - 2.0, max(-r.x, r.x - 640.0));
+        bool lit2 = f < u_v.y;
+        vec3 on = f >= u_v.w || u_v.z > 0.5 ? u_c4 : mix(u_c2, vec3(1.0), f);
+        c = mix(c, lit2 ? on : u_c1 * 2.5, clamp(1.0 - dd, 0.0, 1.0));
+        if (lit2) c += on * 0.45 * exp(-max(dd, 0.0) / 5.0);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// The pixel scenes below draw on a 480 x 180 grid (4 x 4 panel px a pixel) like Neon Falls, with two plates (or screens)
+// for the text where the layout puts it.
+
+// Night Train: a lit train crossing a stone viaduct through snowy mountains at night, a full moon, snow falling. The
+// train stays in the frame; the viaduct, the hills and the far peaks slide by with your speed, the wheels turn, the snow
+// streams past; steam puffs off the engine faster and bigger with the revs; its headlight lights the snow. u_a: x the
+// steam's clock, y how far the viaduct has moved (art px), z seconds. c1 the night, c2 the windows' warm light, c3 the
+// carriages' red, c4 the pines.
+const SCENE_TRAIN = SCENE_HEAD + `uniform vec4 u_a;
+float ridge(float x, float base, float amp, float per) {
+    return base - amp * (1.0 - abs(fract(x / per) * 2.0 - 1.0)) - amp * 0.45 * (1.0 - abs(fract(x / (per * 0.43) + 0.3) * 2.0 - 1.0));
+}
+float plate(vec2 p, vec4 r) {
+    vec2 o = p - r.xy;
+    if (o.x < 0.0 || o.y < 0.0 || o.x >= r.z || o.y >= r.w) return 0.0;
+    float ex = (o.x < 1.0 || o.x >= r.z - 1.0) ? 1.0 : 0.0, ey = (o.y < 1.0 || o.y >= r.w - 1.0) ? 1.0 : 0.0;
+    return ex * ey > 0.5 ? 0.0 : (ex + ey > 0.5 ? 2.0 : 1.0);
+}
+void main() {
+    vec2 p = floor(v_uv * u_size / 4.0);
+    if (kept(p * 4.0 + 2.0)) { gl_FragColor = vec4(0.0); return; }
+    float off = u_a.y;
+    float tb = clamp(p.y / 110.0, 0.0, 1.0) * 8.0, band = floor(tb);
+    if (fract(tb) > 0.5 && mod(p.x + p.y, 2.0) < 0.5) band += 1.0;
+    vec3 c = mix(u_c1 * 0.6, u_c1 * 2.3, min(band, 8.0) / 8.0);
+    vec2 cl = floor(p / 8.0);
+    float h = hash(cl);
+    if (h > 0.88 && p.y < 80.0 && length(p - cl * 8.0 - 1.0 - 6.0 * vec2(hash(cl + 3.0), hash(cl + 8.0))) < 0.8)
+        c += vec3(0.75) * (0.5 + 0.5 * step(0.5, fract(h * 7.0 + u_a.z * (0.3 + h))));
+    float md = length(p - vec2(392.0, 26.0));
+    if (md < 10.0) c = vec3(0.95, 0.94, 0.84) * (1.0 - 0.12 * step(0.82, hash(floor(p / 2.0) + 4.0)));
+    else c += vec3(0.6, 0.65, 0.8) * 0.2 * exp(-(md - 10.0) / 12.0);
+    float f = ridge(p.x + off * 0.08, 96.0, 36.0, 150.0);
+    if (p.y > f) c = mix(vec3(0.62, 0.68, 0.82), u_c1 * 1.7, smoothstep(f + 3.0, f + 18.0, p.y));
+    float mx = p.x + off * 0.3, m = ridge(mx, 116.0, 16.0, 90.0);
+    float pxl = mod(mx, 7.0), ph = 6.0 + 6.0 * hash(vec2(floor(mx / 7.0), 3.0)), ptop = m - ph + abs(pxl - 3.5) * 1.9;
+    if (p.y > m || p.y > ptop) c = p.y < ptop + 1.0 && p.y <= m ? vec3(0.85, 0.9, 0.95) : u_c4 * (p.y > m ? 0.7 : 1.0);
+    if (p.y >= 128.0) {
+        c = u_c1 * 1.1;
+        if (abs(p.y - 160.0) < 1.0) c = vec3(0.45, 0.55, 0.78) * (0.55 + 0.45 * hash(vec2(floor((p.x + off * 0.5) / 4.0), 1.0)));
+    }
+    float lx = mod(p.x + off, 40.0), ax = (lx - 24.0) / 16.0;
+    bool stone = (p.y >= 124.0 && p.y < 128.0) || (p.y >= 128.0 && p.y < 172.0 && !(lx >= 8.0 && p.y > 134.0 + 12.0 * ax * ax));
+    if (stone) {
+        float row = floor(p.y / 4.0);
+        bool mortar = mod(p.y, 4.0) < 1.0 || mod(p.x + off + mod(row, 2.0) * 4.0, 8.0) < 1.0;
+        c = (mortar ? vec3(0.22, 0.22, 0.28) : vec3(0.36, 0.35, 0.42)) * (p.y < 125.0 ? 1.35 : 1.0);
+    }
+    if (p.y >= 172.0) c = vec3(0.72, 0.78, 0.9) * (0.85 + 0.15 * hash(floor(p / 2.0)));
+    float cx = p.x - 60.0, ci = floor(cx / 78.0), lc = cx - ci * 78.0;
+    if (cx >= 0.0 && cx < 234.0 && lc < 74.0 && p.y >= 106.0 && p.y < 124.0 && !(p.y < 107.0 && (lc < 1.0 || lc > 72.0))) {
+        c = p.y < 108.0 ? vec3(0.25, 0.24, 0.28) : u_c3;
+        if (abs(p.y - 119.0) < 0.5) c = vec3(0.85, 0.66, 0.3);
+        float wi = floor((lc - 6.0) / 12.0);
+        if (lc >= 6.0 && lc < 70.0 && mod(lc - 6.0, 12.0) < 7.0 && p.y >= 110.0 && p.y < 116.0) {
+            c = u_c2 * (0.85 + 0.15 * step(0.5, hash(vec2(ci, wi + floor(u_a.z * 0.5)))));
+            vec2 hq = vec2(mod(lc - 6.0, 12.0) - 3.0, p.y - 112.0);
+            if (hash(vec2(ci * 10.0 + wi, 5.0)) > 0.45 && (length(hq) < 1.6 || (hq.y > 1.5 && abs(hq.x) < 2.5))) c = u_c3 * 0.45;
+        }
+        if (p.y >= 122.0) c = vec3(0.06);
+    }
+    if (p.x >= 296.0 && p.x < 357.0 && p.y >= 98.0 && p.y < 124.0) {
+        bool cab = p.x < 313.0 && p.y >= 100.0, boiler = p.x >= 313.0 && p.y >= 108.0 && p.y < 122.0, chim = p.x >= 336.0 && p.x < 342.0 && p.y < 108.0;
+        if (cab || boiler || chim || p.y >= 122.0) {
+            c = cab ? u_c3 * 0.9 : vec3(0.1, 0.13, 0.12) * (1.0 + 0.6 * step(abs(p.y - 111.0), 1.0));
+            if (cab && p.x >= 302.0 && p.x < 309.0 && p.y >= 104.0 && p.y < 110.0) c = u_c2;
+            if (boiler && mod(p.x - 313.0, 10.0) < 1.0) c = vec3(0.7, 0.55, 0.25);
+            if (p.y >= 122.0) c = vec3(0.06);
+        }
+        if (length(p - vec2(355.0, 111.0)) < 1.6) c = vec3(1.0, 0.95, 0.8);
+    }
+    for (int k = 0; k < 9; k++) {
+        float wx = 66.0 + 26.0 * float(k);
+        if (k == 8) wx = 318.0;
+        vec2 wq = p - vec2(wx, 123.0);
+        if (length(wq) < 2.6) {
+            float a = -off * 0.5 + atan(wq.y, wq.x);
+            c = mod(floor(a * 1.27), 2.0) < 0.5 ? vec3(0.32) : vec3(0.12);
+        }
+    }
+    if (p.x > 357.0) {
+        float hd = p.x - 357.0;
+        if (abs(p.y - 111.0) < hd * 0.22 + 1.0) c += u_c2 * 0.28 * (1.0 - hd / 123.0);
+    }
+    for (int k = 0; k < 6; k++) {
+        float a = fract(u_a.x + float(k) / 6.0);
+        vec2 sc = vec2(339.0 - a * (16.0 + 150.0 * u_v.x), 96.0 - a * (28.0 - 16.0 * u_v.x));
+        if (length(p - sc) < 2.0 + a * (8.0 + 5.0 * u_v.y)) c = mix(c, vec3(0.86, 0.88, 0.93), (1.0 - a) * 0.85);
+    }
+    vec2 sq = p + vec2(off * 0.6 + u_a.z * 3.0, -u_a.z * 16.0);
+    vec2 sn = floor(sq / 7.0);
+    if (hash(sn + 4.0) > 0.7 && length(fract(sq / 7.0) * 7.0 - 1.0 - 5.0 * vec2(hash(sn), hash(sn + 1.0))) < 0.75) c = mix(c, vec3(0.96), 0.85);
+    vec2 b = p - vec2(165.0, 174.0);
+    if (b.y >= 0.0 && b.y < 3.0 && b.x >= 0.0 && b.x < 170.0 && mod(b.x, 5.0) < 4.0) {
+        float fb = (floor(b.x / 5.0) + 0.5) / 34.0;
+        vec3 on = fb >= u_v.w ? vec3(1.0, 0.25, 0.3) : mix(u_c2, vec3(1.0), fb);
+        if (u_v.z > 0.5) on = vec3(1.0, 0.3, 0.3);
+        c = fb < u_v.y ? on : u_c1 * 1.6;
+    }
+    float pl = plate(p, p.x < 240.0 ? vec4(24.0, 44.0, 94.0, 54.0) : vec4(362.0, 44.0, 94.0, 54.0));
+    if (pl > 1.5) c = u_c2 * 0.9; else if (pl > 0.5) c = mix(c, u_c1 * 0.45, 0.82);
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Rainy Window: a dark cozy room at night looking out through a big rain-streaked window at a blurred neon city, a cat
+// asleep on the sill (breathing), a steaming mug, a warm lamp glow. Drops sit on the glass and run down it, faster and
+// slanting more with your speed; car lights slide past down in the street; an LED strip on the sill fills with the revs
+// (all of it flashing at the shift point). u_a: x the drops' clock (faster with the speed), y seconds, z the street's
+// clock. c1 the night, c2 the lamp's warm light, c3 neon pink, c4 neon blue.
+const SCENE_RAIN = SCENE_HEAD + `uniform vec4 u_a;
+vec3 city(vec2 p) {
+    float t = clamp((p.y - 14.0) / 136.0, 0.0, 1.0);
+    vec3 c = mix(u_c1 * 0.9, u_c1 * 1.8 + u_c3 * 0.18, t);
+    float bx = floor(p.x / 22.0), bh = 40.0 + 60.0 * hash(vec2(bx, 2.0));
+    if (p.y > 150.0 - bh) {
+        c = u_c1 * 0.7;
+        vec2 w = floor(vec2(p.x, p.y) / 3.0);
+        if (mod(p.x, 22.0) > 3.0 && mod(p.x, 22.0) < 19.0 && mod(p.x, 3.0) < 2.0 && mod(p.y, 3.0) < 2.0 && hash(w + bx) > 0.84) c = mix(u_c2, u_c4, step(0.7, hash(w + 9.0))) * 0.5;
+    }
+    vec2 g = floor(p / 26.0);
+    float gh = hash(g + 3.0);
+    if (gh > 0.62) {
+        vec2 gc = g * 26.0 + 13.0 + 8.0 * (vec2(hash(g + 1.0), hash(g + 5.0)) - 0.5);
+        float r = 5.0 + 7.0 * hash(g + 7.0);
+        vec3 col = gh > 0.85 ? u_c3 : (gh > 0.7 ? u_c4 : u_c2);
+        c += col * 0.32 * smoothstep(r, r - 4.0, length(p - gc));
+    }
+    for (int k = 0; k < 2; k++) {
+        float fk = float(k), dir = k == 0 ? 1.0 : -1.0, ly = 140.0 + 5.0 * fk;
+        float x = mod(u_a.z * (90.0 + 30.0 * fk) + 170.0 * fk, 320.0) + 80.0;
+        if (dir < 0.0) x = 480.0 - x;
+        float d = (x - p.x) * dir, tl = 4.0 + 26.0 * u_v.x;
+        if (abs(p.y - ly) < 1.0 && d >= 0.0 && d < tl) c += (k == 0 ? vec3(1.0, 0.95, 0.8) : vec3(1.0, 0.2, 0.2)) * (1.0 - d / tl);
+    }
+    return c;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size / 4.0);
+    if (kept(p * 4.0 + 2.0)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c;
+    bool glass = p.x >= 112.0 && p.x < 368.0 && p.y >= 14.0 && p.y < 150.0;
+    if (glass) {
+        c = mix(city(p), u_c1 * 1.4, 0.15);
+        float sl = 0.06 + 0.35 * u_v.x;
+        vec2 dq = vec2(p.x - p.y * sl, p.y);
+        vec2 dc = floor(dq / 9.0);
+        if (hash(dc + 2.0) > 0.55) {
+            vec2 dp = dc * 9.0 + 2.0 + 5.0 * vec2(hash(dc), hash(dc + 6.0));
+            float dd = length(dq - dp);
+            if (dd < 1.4 + hash(dc + 3.0)) { c = c * 1.45 + vec3(0.06); if (dq.x < dp.x && dq.y < dp.y) c += vec3(0.25); }
+        }
+        float col = floor(dq.x / 14.0), ch = hash(vec2(col, 1.0));
+        if (ch > 0.45) {
+            float hy = 14.0 + fract(u_a.x * (0.12 + 0.18 * ch) + ch * 7.0) * 150.0;
+            float dx = abs(mod(dq.x, 14.0) - 4.0 - 6.0 * ch);
+            if (dx < 1.5 && p.y < hy + 1.0 && p.y > hy - 26.0 * ch) c = c * (p.y > hy - 1.0 ? 1.7 : 1.25) + vec3(0.04);
+        }
+    } else {
+        c = u_c1 * 0.55 + vec3(0.03, 0.02, 0.02);
+        c += u_c2 * 0.25 * exp(-length(p - vec2(30.0, 70.0)) / 60.0);
+        if (abs(mod(p.x, 32.0) - 16.0) > 15.0 && p.y < 150.0) c *= 0.85;
+        bool frame = p.x >= 104.0 && p.x < 376.0 && p.y >= 6.0 && p.y < 150.0;
+        if (frame) c = vec3(0.3, 0.2, 0.17) * (p.x < 106.0 || p.y < 8.0 ? 1.4 : 1.0);
+    }
+    if (glass && (abs(p.x - 240.0) < 2.0 || abs(p.y - 80.0) < 1.5)) c = vec3(0.3, 0.2, 0.17) * (p.x < 239.0 || p.y < 79.5 ? 1.35 : 1.0);
+    if (!glass) {
+        if (p.y >= 150.0 && p.y < 162.0 && p.x >= 96.0 && p.x < 384.0) c = vec3(0.36, 0.24, 0.2) * (p.y < 152.0 ? 1.4 : 1.0);
+    }
+    // the cat, curled up asleep on the sill, breathing, lit warm from the lamp on the left
+    vec2 cq = p - vec2(190.0, 141.0);
+    float br = 1.0 + 0.07 * sin(u_a.y * 1.6);
+    float cat = length(cq / vec2(30.0, 11.0 * br));
+    vec2 hq = p - vec2(214.0, 137.0);
+    float head = length(hq / vec2(10.0, 8.0));
+    float ear = (abs(hq.x + 5.0) < (hq.y + 13.0) * 0.55 || abs(hq.x - 4.0) < (hq.y + 13.0) * 0.55) && hq.y > -13.0 && hq.y < -5.0 ? 1.0 : 0.0;
+    float tail = abs(length((p - vec2(176.0, 150.0)) / vec2(22.0, 6.0)) - 1.0) < 0.12 && p.y > 146.0 && p.x < 200.0 ? 1.0 : 0.0;
+    if ((cat < 1.0 && p.y < 150.0) || head < 1.0 || ear > 0.5 || tail > 0.5) {
+        c = vec3(0.16, 0.11, 0.1);
+        if (mod(p.x + p.y * 0.5, 7.0) < 2.0 && cat < 1.0) c = vec3(0.22, 0.15, 0.12);
+        if ((cat > 0.78 && cq.y < 2.0 && cq.x < 10.0) || (head > 0.72 && hq.x < 2.0 && hq.y < 2.0) || (ear > 0.5 && hq.x < 0.0)) c = u_c2 * 0.75;
+        if (abs(hq.y) < 0.5 && (abs(hq.x + 4.0) < 1.5 || abs(hq.x - 3.0) < 1.5)) c = vec3(0.05);
+        if (length(hq - vec2(-0.5, 3.0)) < 0.8) c = vec3(0.9, 0.5, 0.55);
+    }
+    vec2 mq = p - vec2(310.0, 141.0);
+    if ((abs(mq.x) < 6.0 && mq.y > -5.0 && mq.y < 9.0) || (abs(length(mq - vec2(7.0, 2.0)) - 3.0) < 1.0 && mq.x > 6.0)) c = vec3(0.88, 0.84, 0.78) * (mq.x < -3.0 ? 1.1 : 0.85);
+    float sy = 135.0 - p.y;
+    if (sy > 0.0 && sy < 26.0 && abs(p.x - 310.0 - 2.5 * sin(sy * 0.35 - u_a.y * 2.0)) < 0.8) c = mix(c, vec3(0.9), 0.35 * (1.0 - sy / 26.0));
+    vec2 b = p - vec2(150.0, 158.0);
+    if (b.y >= 0.0 && b.y < 2.0 && b.x >= 0.0 && b.x < 180.0 && mod(b.x, 5.0) < 4.0) {
+        float fb = (floor(b.x / 5.0) + 0.5) / 36.0;
+        vec3 on = fb >= u_v.w ? vec3(1.0, 0.25, 0.3) : mix(u_c4, u_c3, fb);
+        if (u_v.z > 0.5) on = vec3(1.0);
+        c = fb < u_v.y ? on : vec3(0.18, 0.12, 0.12);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Station Window: inside a space station looking down at Earth through a big window: oceans, land and clouds turning
+// below (faster with your speed), city lights on its night side, the blue rim of the atmosphere, the sun rising over the
+// edge and flaring brighter with the revs (a burst at the shift point), satellites drifting past; panelled walls with
+// blinking lights, two wall screens for the text and a console strip of rev lights. u_a: x the Earth's turn, y the
+// satellites' clock, z seconds. c1 the hull, c2 the oceans, c3 the screens' cyan, c4 the sun.
+const SCENE_ORBIT = SCENE_HEAD + `uniform vec4 u_a;
+void main() {
+    vec2 p = floor(v_uv * u_size / 4.0);
+    if (kept(p * 4.0 + 2.0)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c;
+    vec2 wq = abs(p - vec2(240.0, 84.0)) - vec2(116.0, 66.0);
+    float wd = length(max(wq + 18.0, 0.0)) + min(max(wq.x + 18.0, wq.y + 18.0), 0.0) - 18.0;
+    if (wd < 0.0) {
+        c = vec3(0.0, 0.0, 0.02);
+        vec2 cl = floor(p / 6.0);
+        if (hash(cl) > 0.9 && length(p - cl * 6.0 - 1.0 - 4.0 * vec2(hash(cl + 2.0), hash(cl + 5.0))) < 0.7) c = vec3(0.8);
+        vec2 E = vec2(240.0, 300.0);
+        float R = 220.0;
+        vec2 n = (p - E) / R;
+        float k = dot(n, n);
+        vec3 L = normalize(vec3(0.42, -0.78, 0.25));
+        if (k < 1.0) {
+            vec3 N = vec3(n, sqrt(1.0 - k));
+            float u = atan(N.x, N.z) * 5.0 + u_a.x, v = N.y * 6.0;
+            float land = sin(u * 1.7 + sin(v * 2.3) * 1.4) * sin(v * 1.9 + u * 0.6 + 0.8) + 0.25 * sin(u * 5.3 + v * 4.1);
+            float cloud = sin(u * 3.1 + v * 4.0 + u_a.x * 0.6) * sin(v * 3.3 - u * 1.8) + 0.3 * sin(u * 9.0 - v * 7.0 + u_a.x);
+            vec3 surf = land > 0.25 ? mix(vec3(0.25, 0.5, 0.22), vec3(0.6, 0.5, 0.3), step(0.6, land)) : u_c2;
+            if (cloud > 0.45) surf = vec3(0.92);
+            float day = dot(N, L);
+            c = surf * (0.08 + 0.92 * smoothstep(-0.05, 0.35, day));
+            vec2 lc = floor(vec2(u * 18.0, v * 18.0));
+            if (day < 0.0 && land > 0.25 && cloud < 0.45 && hash(lc) > 0.82) c += vec3(1.0, 0.8, 0.4) * 0.7 * smoothstep(0.0, -0.2, day);
+            c += vec3(0.3, 0.6, 1.0) * 0.5 * smoothstep(0.9, 1.0, sqrt(k)) * smoothstep(-0.2, 0.3, day);
+        } else c += vec3(0.25, 0.5, 1.0) * 0.55 * exp(-(sqrt(k) - 1.0) * R / 6.0);
+        vec2 S = E + R * 1.02 * normalize(vec2(0.36, -0.93));
+        float sd = length(p - S), fl = 0.35 + 1.0 * u_v.y + (u_v.z > 0.5 ? 1.2 : 0.0);
+        c += u_c4 * fl * (exp(-sd / 5.0) + 0.25 * exp(-sd / 30.0));
+        vec2 ray = p - S;
+        c += u_c4 * 0.12 * fl * (exp(-abs(ray.y - ray.x * 0.39) / 1.5) + exp(-abs(ray.x) / 1.5)) * exp(-length(ray) / 80.0);
+        for (int s = 0; s < 2; s++) {
+            float fs = float(s), x = mod(u_a.y * (40.0 + 25.0 * fs) + 150.0 * fs, 300.0) + 90.0, y = 40.0 + 34.0 * fs;
+            vec2 q = p - vec2(x, y);
+            if (abs(q.x) < 1.5 && abs(q.y) < 1.5) c = vec3(0.75, 0.72, 0.6);
+            if (abs(q.y) < 1.0 && abs(q.x) > 2.0 && abs(q.x) < 7.0) c = mod(q.x, 2.0) < 1.0 ? vec3(0.2, 0.3, 0.7) : vec3(0.35, 0.45, 0.85);
+            if (length(q - vec2(0.0, -2.0)) < 0.6 && fract(u_a.z) < 0.5) c = vec3(1.0, 0.2, 0.2);
+        }
+        c += vec3(0.04, 0.05, 0.07) * smoothstep(-20.0, 0.0, wd);
+    } else {
+        c = u_c1 * (0.85 + 0.15 * step(1.0, mod(p.y, 24.0))) * (0.9 + 0.1 * step(1.0, mod(p.x, 32.0)));
+        if (mod(p.x, 32.0) < 3.0 && mod(p.y, 24.0) < 3.0 && mod(p.x, 32.0) > 1.0 && mod(p.y, 24.0) > 1.0) c = u_c1 * 1.6;
+        if (wd < 7.0) c = u_c1 * (1.5 + 0.5 * step(wd, 2.0)) + (mod(atan(p.y - 84.0, p.x - 240.0) * 40.0, 6.28) < 0.6 ? vec3(0.15) : vec3(0.0));
+        vec2 ld = floor(vec2(p.x / 4.0, p.y / 3.0));
+        if (p.y > 160.0 && p.y < 168.0 && mod(p.x, 4.0) < 2.0 && mod(p.y, 3.0) < 1.0 && p.x > 130.0 && p.x < 350.0) {
+            float lh = hash(ld);
+            if (lh > 0.5) c = (lh > 0.85 ? vec3(1.0, 0.3, 0.3) : (lh > 0.7 ? vec3(1.0, 0.75, 0.2) : vec3(0.3, 1.0, 0.5))) * (0.4 + 0.6 * step(0.5, fract(lh * 13.0 + u_a.z * (0.2 + lh))));
+        }
+        vec4 r = p.x < 240.0 ? vec4(16.0, 52.0, 88.0, 62.0) : vec4(376.0, 52.0, 88.0, 62.0);
+        vec2 o = p - r.xy;
+        if (o.x >= -2.0 && o.y >= -2.0 && o.x < r.z + 2.0 && o.y < r.w + 2.0) {
+            c = vec3(0.12, 0.13, 0.16);
+            if (o.x >= 0.0 && o.y >= 0.0 && o.x < r.z && o.y < r.w) c = vec3(0.01, 0.05, 0.06) + u_c3 * 0.04 * step(1.0, mod(p.y, 2.0));
+        }
+    }
+    vec2 b = p - vec2(150.0, 172.0);
+    if (b.y >= 0.0 && b.y < 3.0 && b.x >= 0.0 && b.x < 180.0 && mod(b.x, 5.0) < 4.0) {
+        float fb = (floor(b.x / 5.0) + 0.5) / 36.0;
+        vec3 on = fb >= u_v.w ? vec3(1.0, 0.25, 0.3) : mix(u_c3, u_c4, fb);
+        if (u_v.z > 0.5) on = vec3(1.0);
+        c = fb < u_v.y ? on : u_c1 * 0.6;
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// The canvas designs (the "Sakura 桜 cluster theme" canvas, Modern collection): their shapes, gauges and light here, their
+// text as text widgets (tools/gen_scenes.py places them where the designs do). Both get u_b: oil, coolant, fuel and boost
+// as their bars' fills 0..1; u_g: x / y the G dot's offset in g (screen directions), z coolant over its limit, w the
+// shift point (steady while it lasts; u_v.z is its 4 Hz blink); u_a.x seconds.
+
+// Aurora (05 · AURORA, Modern EV glass): drifting aurora light behind frosted glass cards, a glowing ring gauge (r 235
+// round 960,405, 240 degrees over the top) lit mint to violet up to the revs with a red zone and a white dot at its end,
+// orange and pulsing at the shift point; the cards' bars, the G-force ball, the mode pill, the shift / warning pills.
+// c1 mint, c2 violet, c3 the shift orange, c4 red.
+const SCENE_GLASS = SCENE_HEAD + `uniform vec4 u_a;
+uniform vec4 u_b;
+uniform vec4 u_g;
+const vec3 BG = vec3(0.016, 0.024, 0.043);
+const vec3 AMBER = vec3(1.0, 0.761, 0.302);
+float rbox(vec2 p, vec4 b, float r) { vec2 q = abs(p - b.xy - b.zw * 0.5) - b.zw * 0.5 + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+float blob(vec2 p, vec2 c, vec2 r, float T) {
+    float ph = 0.5 - 0.5 * cos(3.14159 * u_a.x / T);
+    vec2 d = (p - c - ph * vec2(60.0, 20.0)) / (r * (1.0 + 0.12 * ph));
+    return 1.0 - smoothstep(0.45, 1.4, length(d));
+}
+vec3 grad(float x) { return mix(u_c1, u_c2, clamp((x - 700.0) / 520.0, 0.0, 1.0)); }
+// a bar 6 px tall, 360 wide, round ends: its track and its fill (the gradient, or amber when warn)
+vec3 bar(vec2 p, vec3 c, vec2 at, float w, float f, float warn) {
+    float d = rbox(p, vec4(at, w, 6.0), 3.0);
+    if (d > 0.5) return c;
+    float k = clamp(0.5 - d, 0.0, 1.0);
+    vec3 fill = warn > 0.5 ? AMBER : mix(u_c1, u_c2, (p.x - at.x) / w);
+    return mix(c, p.x - at.x < f * w ? fill : mix(c, vec3(1.0), 0.06), k);
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c = BG;
+    c = mix(c, vec3(0.114, 0.914, 0.714), 0.22 * blob(p, vec2(270.0, 120.0), vec2(390.0, 180.0), 18.0));
+    c = mix(c, vec3(0.486, 0.302, 1.0), 0.24 * blob(p, vec2(1610.0, 110.0), vec2(430.0, 190.0), 23.0));
+    c = mix(c, vec3(0.361, 0.949, 0.788), 0.10 * blob(p, vec2(970.0, 690.0), vec2(410.0, 130.0), 27.0));
+    c = mix(c, BG, 0.85 * (1.0 - clamp(length((p - vec2(960.0, 420.0)) / vec2(360.0, 300.0)), 0.0, 1.0)));
+    // the two glass cards (the left one's rim amber while the coolant is over its limit)
+    for (int k = 0; k < 2; k++) {
+        vec4 r = k == 0 ? vec4(180.0, 224.0, 420.0, 376.0) : vec4(1320.0, 224.0, 420.0, 376.0);
+        float d = rbox(p, r, 28.0);
+        if (d < 0.5) {
+            c = mix(c, vec3(1.0), 0.035 * clamp(0.5 - d, 0.0, 1.0));
+            if (d > -1.0) c = mix(c, k == 0 && u_g.z > 0.5 ? AMBER : vec3(1.0), k == 0 && u_g.z > 0.5 ? 0.5 : 0.08);
+        }
+    }
+    c = bar(p, c, vec2(210.0, 339.0), 360.0, u_b.x, 0.0);
+    c = bar(p, c, vec2(210.0, 417.0), 360.0, u_b.y, u_g.z);
+    c = bar(p, c, vec2(210.0, 495.0), 360.0, u_b.z, 0.0);
+    c = bar(p, c, vec2(1350.0, 339.0), 360.0, u_b.w, 0.0);
+    // the G-force ball: a disc, a ring at half, cross hairs, the dot with its glow
+    vec2 gq = p - vec2(1634.0, 446.0);
+    float gr = length(gq);
+    if (gr < 65.0) {
+        c = mix(c, vec3(1.0), 0.02);
+        if (abs(gr - 64.0) < 0.7) c = mix(c, vec3(1.0), 0.1);
+        if (abs(gr - 32.0) < 0.6 || abs(gq.x) < 0.6 || abs(gq.y) < 0.6) c = mix(c, vec3(1.0), 0.07);
+    }
+    float gd = length(gq - clamp(u_g.xy * 60.0, vec2(-55.0), vec2(55.0)));
+    c = mix(c, u_c1, clamp(9.5 - gd, 0.0, 1.0)) + u_c1 * 0.3 * exp(-max(gd - 9.0, 0.0) / 6.0);
+    // the ring gauge
+    vec2 d = p - vec2(960.0, 405.0);
+    float r = length(d), th = atan(d.x, -d.y), f = (th + 2.0944) / 4.1888;
+    bool shift = u_g.w > 0.5;
+    float pulse = shift ? 0.775 + 0.225 * sin(u_a.x * 6.2832) : 1.0;
+    vec3 lit = shift ? u_c3 : grad(p.x);
+    float fe = clamp(u_v.y, 0.0, 1.0), ae = -2.0944 + fe * 4.1888;
+    vec2 E = vec2(960.0, 405.0) + 235.0 * vec2(sin(ae), -cos(ae));
+    vec2 S0 = vec2(960.0, 405.0) + 235.0 * vec2(sin(-2.0944), -cos(-2.0944));
+    float onArc = f >= 0.0 && f <= 1.0 ? abs(r - 235.0) : min(length(p - S0), length(p - (vec2(960.0, 405.0) + 235.0 * vec2(sin(2.0944), -cos(2.0944)))));
+    c = mix(c, vec3(1.0), 0.07 * clamp(6.5 - onArc, 0.0, 1.0));
+    if (f >= u_v.w && f <= 1.0) c = mix(c, u_c4, 0.55 * clamp(6.5 - abs(r - 235.0), 0.0, 1.0));
+    float litD = (f >= 0.0 && f <= fe) ? abs(r - 235.0) : min(length(p - S0), length(p - E));
+    c += lit * 0.45 * pulse * exp(-max(litD - 5.0, 0.0) / 7.0) * step(litD, 40.0);
+    c = mix(c, lit, pulse * clamp(5.5 - litD, 0.0, 1.0));
+    for (int k = 0; k <= 7; k++) {
+        float a = -2.0944 + float(k) / 7.0 * 4.1888;
+        float td = length(p - vec2(960.0, 405.0) - 259.0 * vec2(sin(a), -cos(a)));
+        c = mix(c, k == 7 ? u_c4 : vec3(0.541, 0.576, 0.651), clamp(3.0 - td, 0.0, 1.0));
+    }
+    float ed = length(p - E);
+    vec3 dotc = shift ? u_c3 : vec3(1.0);
+    c += (shift ? u_c3 : u_c1) * 0.55 * pulse * exp(-max(ed - 11.0, 0.0) / 7.0);
+    c = mix(c, dotc, pulse * clamp(11.5 - ed, 0.0, 1.0));
+    // the mode pill, and the shift-up / warning pill under the speed
+    float pd = rbox(p, vec4(885.0, 232.0, 150.0, 30.0), 15.0);
+    if (pd < 0.5) c = mix(c, abs(pd + 0.5) < 1.0 ? mix(c, u_c1, 0.3) : mix(c, u_c1, 0.1), clamp(0.5 - pd, 0.0, 1.0));
+    bool blinkOn = u_v.z > 0.5;
+    if ((shift && blinkOn) || (!shift && u_g.z > 0.5)) {
+        vec3 pc = shift ? u_c3 : AMBER;
+        vec4 pr = shift ? vec4(894.0, 570.0, 132.0, 36.0) : vec4(776.0, 570.0, 368.0, 36.0);
+        float sd = rbox(p, pr, 18.0);
+        if (sd < 0.5) c = mix(c, abs(sd + 0.5) < 1.0 ? mix(c, pc, 0.6) : mix(c, pc, 0.14), clamp(0.5 - sd, 0.0, 1.0));
+        vec2 ic = p - vec2(pr.x + 28.0, 588.0);
+        float icon = shift ? min(abs(ic.x) + max(abs(ic.y) - 7.0, 0.0), abs(abs(ic.x) - (ic.y + 7.0))) : min(abs(abs(ic.x) * 1.8 - (ic.y + 8.0) * 0.9), max(abs(ic.y - 8.0), abs(ic.x) - 8.0));
+        if (shift && ic.y > 7.5) icon = 9.0;
+        if (icon < 1.3 && abs(ic.x) < 9.5 && abs(ic.y) < 9.5) c = pc;
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+// Orbital (08 · ORBITAL, Space telemetry): a star field over a planet's horizon (its rim glowing blue), the revs as a
+// satellite going round an orbit (an ellipse 380 x 168 round 960,392: dashed in full, its upper arc lit cyan from the 0 mark
+// at its lower left up to the revs, red from 6 500, as the design spaces its 0..7 marks along it), the satellite orange and
+// blinking at the shift point; the readouts' 2 px bars, the attitude globe and its G dot, the SHIFT / COOLANT ANOMALY tags.
+// c1 cyan, c2 the shift orange, c3 amber, c4 red.
+const SCENE_ORBITAL = SCENE_HEAD + `uniform vec4 u_a;
+uniform vec4 u_b;
+uniform vec4 u_g;
+const vec2 OC = vec2(960.0, 392.0);
+const vec2 OR = vec2(380.0, 168.0);
+const vec3 LINE = vec3(0.102, 0.133, 0.251);
+const vec3 GREY = vec3(0.447, 0.510, 0.659);
+float rbox(vec2 p, vec4 b) { vec2 q = abs(p - b.xy - b.zw * 0.5) - b.zw * 0.5; return max(q.x, q.y); }
+// the orbit's angle (degrees, 150 at the 0 mark .. 390 at the 7 mark) for a fraction of the rev scale, and back: the design
+// spaces its marks evenly along the arc's length, so the angles between them differ
+float angOf(float f) {
+    float k = clamp(f, 0.0, 1.0) * 7.0, a = 150.0;
+    a = k < 1.0 ? mix(150.0, 197.6, k) : (k < 2.0 ? mix(197.6, 232.5, k - 1.0) : (k < 3.0 ? mix(232.5, 258.0, k - 2.0) : (k < 4.0 ? mix(258.0, 282.0, k - 3.0) :
+        (k < 5.0 ? mix(282.0, 307.5, k - 4.0) : (k < 6.0 ? mix(307.5, 342.4, k - 5.0) : mix(342.4, 390.0, k - 6.0))))));
+    return a;
+}
+float fracOf(float a) {
+    float k = a < 197.6 ? (a - 150.0) / 47.6 : (a < 232.5 ? 1.0 + (a - 197.6) / 34.9 : (a < 258.0 ? 2.0 + (a - 232.5) / 25.5 : (a < 282.0 ? 3.0 + (a - 258.0) / 24.0 :
+        (a < 307.5 ? 4.0 + (a - 282.0) / 25.5 : (a < 342.4 ? 5.0 + (a - 307.5) / 34.9 : 6.0 + (a - 342.4) / 47.6)))));
+    return k / 7.0;
+}
+vec3 bar2(vec2 p, vec3 c, vec2 at, float w, float f, vec3 col) {
+    if (p.y < at.y || p.y >= at.y + 2.0 || p.x < at.x || p.x >= at.x + w) return c;
+    return p.x - at.x < f * w ? col : LINE;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c = vec3(0.008, 0.012, 0.039);
+    vec2 cl = floor(p / 64.0);
+    float h = hash(cl);
+    vec2 sp = cl * 64.0 + 4.0 + 56.0 * vec2(hash(cl + 3.0), hash(cl + 7.0));
+    float tw = h > 0.85 ? 0.15 + 0.55 * (0.5 + 0.5 * sin(u_a.x * 0.785 + h * 40.0)) : 0.15 + 0.35 * hash(cl + 9.0);
+    c = mix(c, vec3(0.788, 0.839, 1.0), tw * clamp((h > 0.8 ? 1.9 : 1.4) - length(p - sp), 0.0, 1.0));
+    // the planet: a huge disc whose top is at y 640, a soft blue glow above its rim, a bright inner edge
+    vec2 pc = vec2(960.0, 2100.0);
+    float pd = length(p - pc) - 1460.0;
+    if (pd < 0.0) {
+        float g = length(p - vec2(960.0, 640.0)) / 3265.0;
+        c = g < 0.12 ? mix(vec3(0.043, 0.086, 0.212), vec3(0.020, 0.039, 0.110), g / 0.12) : mix(vec3(0.020, 0.039, 0.110), vec3(0.008, 0.012, 0.039), clamp((g - 0.12) / 0.18, 0.0, 1.0));
+        c += vec3(0.239, 0.482, 1.0) * 0.18 * exp(pd / 30.0);
+        c = mix(c, vec3(0.49, 0.976, 1.0), 0.45 * clamp(2.0 + pd, 0.0, 1.0));
+    } else c += vec3(0.239, 0.482, 1.0) * 0.35 * exp(-pd / 22.0);
+    // the orbit: the dashed ellipse, the scale's arc, the lit part, the red zone, its marks, the satellite
+    vec2 q = (p - OC) / OR;
+    float lq = length(q);
+    float ed = (lq - 1.0) / length(q / (OR * max(lq, 0.001)));
+    float a = degrees(atan(q.y, q.x));
+    if (a < 0.0) a += 360.0;
+    float aa = a < 90.0 ? a + 360.0 : a;
+    if (abs(ed) < 0.8 && mod(a * 3.6, 8.0) < 2.0) c = mix(c, LINE, 0.9);
+    bool onArc = aa >= 150.0 && aa <= 390.0;
+    bool shift = u_g.w > 0.5;
+    float pulse = shift ? 0.75 + 0.25 * sin(u_a.x * 6.2832) : 1.0;
+    vec3 lit = shift ? u_c2 : u_c1;
+    if (onArc) {
+        float f = fracOf(aa);
+        c = mix(c, u_c1, 0.12 * clamp(2.0 - abs(ed), 0.0, 1.0));
+        if (f >= u_v.w) c = mix(c, u_c4, 0.7 * clamp(2.0 - abs(ed), 0.0, 1.0));
+        if (f <= u_v.y) {
+            c += lit * 0.5 * pulse * 0.6 * exp(-abs(ed) / 4.0);
+            c = mix(c, lit, pulse * clamp(2.0 - abs(ed), 0.0, 1.0));
+        }
+    }
+    for (int k = 0; k <= 7; k++) {
+        float ta = radians(angOf(float(k) / 7.0));
+        vec2 m = OC + OR * vec2(cos(ta), sin(ta));
+        vec2 n = normalize(vec2(cos(ta), sin(ta)) / OR);
+        vec2 dm = p - m;
+        float along = dot(dm, n), across = dot(dm, vec2(-n.y, n.x));
+        if (along > 0.0 && along < 8.0 && abs(across) < 0.75) c = k == 7 ? u_c4 : GREY;
+    }
+    float sa = radians(angOf(u_v.y));
+    vec2 S = OC + OR * vec2(cos(sa), sin(sa));
+    float sd = length(p - S);
+    bool sOn = !shift || u_v.z > 0.5;
+    if (sOn) {
+        c = mix(c, lit, 0.45 * clamp(1.0 - abs(sd - 15.0), 0.0, 1.0));
+        c = mix(c, shift ? u_c2 : vec3(0.933, 0.953, 1.0), clamp(7.5 - sd, 0.0, 1.0));
+    }
+    // the readouts' 2 px bars (the coolant's amber while over its limit)
+    c = bar2(p, c, vec2(180.0, 494.0), 360.0, u_b.x, u_c1);
+    c = bar2(p, c, vec2(180.0, 550.0), 360.0, u_b.y, u_g.z > 0.5 ? u_c3 : u_c1);
+    c = bar2(p, c, vec2(180.0, 606.0), 360.0, u_b.z, u_c1);
+    c = bar2(p, c, vec2(1400.0, 330.0), 320.0, u_b.w, u_c1);
+    if (u_g.z > 0.5 && rbox(p, vec4(257.0, 518.0, 78.0, 17.0)) < 0.0) c = u_c3;     // the ANOMALY badge
+    // the attitude globe: its disc, latitudes and a meridian, the G dot
+    vec2 gq = p - vec2(1630.0, 498.0);
+    float gr = length(gq);
+    if (gr < 80.5) {
+        c = mix(c, u_c1, 0.03);
+        float l1 = abs(length(gq / vec2(80.0, 26.0)) - 1.0) * 26.0, l2 = abs(length((gq + vec2(0.0, 28.0)) / vec2(70.4, 20.0)) - 1.0) * 20.0;
+        float l3 = abs(length((gq - vec2(0.0, 28.0)) / vec2(70.4, 20.0)) - 1.0) * 20.0, l4 = abs(length(gq / vec2(28.0, 80.0)) - 1.0) * 28.0;
+        if (min(min(l1, l2), min(l3, l4)) < 0.7) c = LINE;
+    }
+    if (abs(gr - 80.0) < 0.7) c = mix(c, GREY, 0.6);
+    float dd = length(gq - clamp(u_g.xy * 76.0, vec2(-72.0), vec2(72.0)));
+    c = mix(c, u_c1, clamp(8.5 - dd, 0.0, 1.0)) + u_c1 * 0.3 * exp(-max(dd - 8.0, 0.0) / 6.0);
+    // the SHIFT tag (blinking fast) or the COOLANT ANOMALY tag (blinking at 1 Hz), top middle
+    bool warn = u_g.z > 0.5 && !shift;
+    if ((shift && u_v.z > 0.5) || (warn && fract(u_a.x) < 0.5)) {
+        vec4 tr = shift ? vec4(896.0, 128.0, 128.0, 31.0) : vec4(756.0, 128.0, 408.0, 31.0);
+        vec3 tc = shift ? u_c2 : u_c3;
+        float td = rbox(p, tr);
+        if (td < 0.0) c = td > -1.0 ? tc : mix(c, tc, 0.1);
+        vec2 ic = p - (shift ? vec2(1000.0, 144.0) : vec2(784.0, 144.0));
+        if (shift && ic.y > -6.0 && ic.y < 5.0 && abs(ic.x) < (ic.y + 6.0) * 0.6) c = tc;
+        if (!shift && ic.y > -7.0 && ic.y < 7.0 && abs(ic.x) < (ic.y + 7.0) * 0.6 && !(abs(ic.x) < 1.0 && ic.y > -2.0 && ic.y < 5.0 && ic.y != 3.0)) c = tc;
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
+module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA, photo: PHOTO,
+    scene_synth: SCENE_SYNTH, scene_warp: SCENE_WARP, scene_neon: SCENE_NEON, scene_jet: SCENE_JET, scene_paper: SCENE_PAPER, scene_seasons: SCENE_SEASONS,
+    scene_chrono: SCENE_CHRONO, scene_aurora: SCENE_AURORA, scene_trails: SCENE_TRAILS,
+    scene_falls: SCENE_FALLS, scene_swim: SCENE_SWIM,
+    scene_train: SCENE_TRAIN, scene_rain: SCENE_RAIN, scene_orbit: SCENE_ORBIT,
+    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL };

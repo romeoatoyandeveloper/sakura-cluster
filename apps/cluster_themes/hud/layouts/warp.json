@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 2,
+  "name": "Warp",
+  "packWaste": 3,
+  "theme": "warp",
+  "widgets": [
+    {
+      "id": "scene",
+      "type": "scene",
+      "scene": "warp",
+      "class": "content",
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "w": 1920,
+      "h": 720,
+      "keep": [
+        1380,
+        660,
+        1460,
+        720
+      ]
+    },
+    {
+      "id": "speed",
+      "type": "text",
+      "z": 5,
+      "x": 760,
+      "y": 265,
+      "w": 400,
+      "h": 115,
+      "text": "{{speed}}",
+      "font": "s_hero",
+      "color": "fg",
+      "align": "center"
+    },
+    {
+      "id": "speed_u",
+      "type": "text",
+      "z": 5,
+      "x": 760,
+      "y": 398,
+      "w": 400,
+      "h": 29,
+      "text": "{{u:speedLc}}",
+      "font": "s_unit",
+      "color": "dim",
+      "align": "center"
+    },
+    {
+      "id": "time_lab",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 212,
+      "w": 360,
+      "h": 29,
+      "text": "TIME",
+      "font": "s_label",
+      "color": "dim"
+    },
+    {
+      "id": "clock",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 263,
+      "w": 360,
+      "h": 29,
+      "text": "{{time}}",
+      "font": "m_mid",
+      "color": "fg"
+    },
+    {
+      "id": "out",
+      "type": "text",
+      "z": 5,
+      "x": 150,
+      "y": 314,
+      "w": 360,
+      "h": 29,
+      "text": "{{ambientN}}{{u:temp}} outside",
+      "font": "s_unit",
+      "color": "sec"
+    },
+    {
+      "id": "gear_lab",
+      "type": "text",
+      "z": 5,
+      "x": 1410,
+      "y": 212,
+      "w": 360,
+      "h": 29,
+      "text": "GEAR",
+      "font": "s_label",
+      "color": "dim",
+      "align": "right"
+    },
+    {
+      "id": "gear",
+      "type": "text",
+      "z": 5,
+      "x": 1410,
+      "y": 272,
+      "w": 360,
+      "h": 65,
+      "text": "{{gear}}",
+      "font": "s_gear",
+      "color": "fg",
+      "align": "right"
+    },
+    {
+      "id": "mode",
+      "type": "text",
+      "z": 5,
+      "x": 1410,
+      "y": 352,
+      "w": 360,
+      "h": 29,
+      "text": "{{mode}}",
+      "font": "s_label",
+      "color": "sec",
+      "align": "right"
+    }
+  ]
+}
