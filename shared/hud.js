@@ -410,7 +410,7 @@ const PHOTO_STAR_RAD = 0.6;
 const PHOTO_HEART_S = 4;
 // Scene themes (widget type "scene", shaders.js scene_*): which of the scene inputs each scene's shader declares (u_a its
 // clocks, u_b its numbers, u_g the g), so only those are sent; u_drive, u_keep, u_c1..u_c4 and u_dim go to every scene
-const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg', canal: 'a', hanami: 'a', highway: 'a' };
+const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg', canal: 'a', hanami: 'a', highway: 'ab' };
 const SCENE_SPEED = 200;              // km/h at u_drive.x = 1
             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
@@ -2822,7 +2822,8 @@ class HudApp {
      *   trails   u_a: the traffic's clock (faster with the speed), the dashes' phase, seconds
      *   canal    u_a: the water's clock (faster with the speed), seconds, the shift point; its picture ("art", "photo") as u_art, u_photo
      *   highway  u_a: how far the road has come (world units, faster than real, repeating every 480), seconds, the
-     *            streaks' clock (repeating every 64)
+     *            streaks' clock (repeating every 64); u_b: the road's bend (-1.4 left .. 1.4 right: the g sideways and
+     *            the next turn of a route), braking (0..1), its flash, the sun's flare (speeding up hard)
      *   hanami   u_a: the water's clock, seconds, the shift point, the wind's clock (both faster with the speed); its
      *            picture as canal's
      *   glass,   u_b: oil, coolant, fuel, boost as their bars' fills; u_g: the G dot (g, screen directions; the VFD's
@@ -2853,6 +2854,19 @@ class HudApp {
             x.travel = ((x.travel || 0) + dt * kmh / 3.6 / 5.4 * (1.6 + 7.4 * f * f)) % 480;
             x.rush = ((x.rush || 0) + dt * (0.15 + 3.2 * f * f)) % 64;
             send('u_a', [Math.round(x.travel * 1000) / 1000, r2(sec), Math.round(x.rush * 1000) / 1000, 0]);
+            // the road follows the drive (u_b): it bends with the g sideways (0.5 g = a full bend) and towards the next
+            // turn of a route as you come up to it; hard braking tints the scene red with a flash as it starts, hard
+            // speeding up makes the sun flare. g in the G-meter's screen directions (its "swap" settings apply).
+            const S = this._gSigns(null), gx = this._raw('gLat'), gy = this._raw('gLong');
+            const side = isNum(gx) ? S[0] * gx : 0, fwd = isNum(gy) ? -S[1] * gy : 0;
+            const ease = (k, to, tau) => { x[k] = (x[k] || 0) + (to - (x[k] || 0)) * Math.min(1, dt / tau); return x[k]; };
+            const sm = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+            const bend = ease('bend', Math.max(-1.4, Math.min(1.4, side / 0.5 + this._navBend(now))), 0.45);
+            const brk = ease('brk', sm(0.25, 0.6, -fwd), -fwd > 0.25 ? 0.08 : 0.5), was = x.brkOn;
+            x.brkOn = brk > 0.5;
+            if (x.brkOn && !was) x.flashAt = now;
+            const flash = x.flashAt ? Math.exp(-(now - x.flashAt) / 300) : 0;
+            send('u_b', [r2(bend), r2(brk), r2(flash < 0.02 ? 0 : flash), r2(ease('flare', sm(0.12, 0.4, fwd), 0.3))]);
         } else if (s === 'synth') send('u_a', [r2((D / 8) % 1), Math.round((D * 0.6) % 11610), r2(sec)]);
         else if (s === 'warp') {
             x.travel = ((x.travel || 0) + dt * (0.03 + 0.9 * Math.min(1, kmh / SCENE_SPEED))) % 256;
@@ -3185,10 +3199,27 @@ class HudApp {
     /** The directions' source (subscriptions, the event list), started with the first nav widget, kept until stop(). */
     _navSource() {
         if (!this.directions) {
-            const shown = () => { let on = false; this.widgets.forEach((x) => { if (x.w.type === 'nav') on = true; }); return on; };
+            const shown = () => { let on = false; this.widgets.forEach((x) => { if (x.w.type === 'nav' || (x.w.type === 'scene' && x.w.scene === 'highway')) on = true; }); return on; };
             this.directions = this._navMods().Nav.start(this.ctx, this.log, { wanted: () => this._navMode() !== 'off' && shown() });
         }
         return this.directions;
+    }
+    /**
+     * Neon Highway's road ahead: which way and how much it bends for the next turn of a route, -1.3 (left) .. 1.3
+     * (right), growing from 400 m before it to its full bend 40 m before; 0 with no route or a straight one. A
+     * slight turn bends half, a sharp one or a U-turn 1.3, a branch or fork 0.6, keeping or changing lanes 0.35.
+     */
+    _navBend(now) {
+        if (this._navMode() === 'off') return 0;
+        let v = null;
+        try { v = this._navSource().view('route', now); } catch (e) { if (!this.navBendErr) { this.navBendErr = true; this.log.warn('road bend: no directions: ' + (e && e.stack || e)); } return 0; }
+        const m = v && v.show, N = this._navMods().Nav;
+        if (!m || !m.dir || (m.kind !== 'turn' && m.kind !== 'branch' && m.kind !== 'keep' && m.kind !== 'lanechange')) return 0;
+        const d = String(m.dir), dir = /LEFT/.test(d) ? -1 : /RIGHT/.test(d) ? 1 : 0, at = N.metres(m);
+        if (!dir || at === null) return 0;
+        const k = m.kind === 'branch' ? 0.6 : m.kind !== 'turn' ? 0.35 : /SLIGHT/.test(d) ? 0.5 : /HARD|UTURN/.test(d) ? 1.3 : 1;
+        const t = Math.min(1, Math.max(0, (400 - at) / 360));
+        return dir * k * t * t * (3 - 2 * t);
     }
     /** "navDirections": 'route' (the default), 'near' or 'off'. */
     _navMode() { const m = this.setting('navDirections'); return m === 'off' || m === 'near' ? m : 'route'; }

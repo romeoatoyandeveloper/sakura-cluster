@@ -29,6 +29,8 @@
     "runs.js",
     "tz.js",
     "holidays.js",
+    "nav.js",
+    "hud_nav.js",
     "vehicle_state.js",
     "shift_cue.js",
     "smart_temps.js",
@@ -89,6 +91,36 @@
     "de.bmw.infrastructure.VehicleCondition": {
       "VehicleCondition": "s",
       "_optional": "the car switching off: no new layer while it does (cluster-render's switch-off guard)"
+    },
+    "de.bmw.infotainment.navigation.guiding.Guidance": {
+      "_optional": "Neon Highway's road bending towards the next turn of a route",
+      "_instances": "Main_Instance",
+      "guidanceState": "rs",
+      "guidingProvider": "rs",
+      "conclusiveDart": "rs",
+      "currentLaneGuiding": "rs"
+    },
+    "de.bmw.infotainment.navigation.guiding.GuidanceEventList": {
+      "_optional": "Neon Highway's road bending towards the next turn of a route",
+      "_instances": "Main_Instance",
+      "_methods": [
+        "queryContent"
+      ]
+    },
+    "de.bmw.infotainment.navigation.projectedmodeguiding.ProjectedModeGuiding": {
+      "_optional": "Neon Highway's road bending towards the next turn of a route",
+      "_instances": "Main_Instance",
+      "currentLaneGuiding": "rs"
+    },
+    "de.bmw.infotainment.a4a.carplay.CarPlayManager": {
+      "_optional": "Neon Highway's road bending towards a phone's next turn (CarPlay, Android Auto)",
+      "_instances": "CarPlayManagerInst1",
+      "projectedGuidanceActive": "rs"
+    },
+    "de.bmw.infotainment.sdi.aap.androidautoprojectedmanager.AndroidAutoProjectedManager": {
+      "_optional": "Neon Highway's road bending towards a phone's next turn (CarPlay, Android Auto)",
+      "_instances": "AndroidAutoProjectedManagerInst1",
+      "projectedGuidanceActive": "rs"
     }
   },
   "screens": [
