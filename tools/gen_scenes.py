@@ -345,3 +345,70 @@ tb = 128 + 1 + 6 + metrics(M7, 16)[0]
 T(L, 'shift_tag', 913, tb, 90, 'SHIFT', 'ob_alert', 'orange', showWhen='shift', rate=25)
 T(L, 'warn_tag', 800, tb, 360, 'COOLANT ANOMALY · {{coolant}}°{{u:deg}}', 'ob_alert', 'amber', showWhen='warn:coolant', warnFlash=False)
 L.write()
+
+# VFD (T4 · VFD, the "Terminal variants" page: an 80s vacuum-fluorescent dash), its cyan filter. Share Tech Mono labels at
+# the design's sizes; every number in seven segments (vf_gear / vf_speed / vf_val / vf_row, drawn from the design's own
+# segment geometry) over the ghost 8s the shader draws in the same slots. A number's box ends 2 glow radii past its last
+# slot (bake_seg's DELTA): slot x + slots x pitch + DELTA, right-aligned, so each digit lands in its slot.
+L = Layout('vfd', 'VFD', 'vfd', nightDim=0.8)
+STM = 'ShareTechMono-Regular.ttf'
+
+
+def lab(id, x, top, lh, size, txt, color='dim', **kw):
+    T(L, id, x, css_base(top, lh, STM, size), kw.pop('w', 200), txt, 'vf_%d' % size, color, **kw)
+
+
+def seg(id, f, x0, top, slots, pitch, glow, txt, room=1, **kw):
+    """Seven-segment text in `slots` digit slots from x0, top (the design's slot origin: before the slant, so the digits'
+    bottom-left), `room` slots more to the left for a longer value (a minus, a fourth digit). The cell keeps 2 + 2 glow px
+    round the ink (bake_seg), so the box starts that much above the digits' top."""
+    pad = 2 + 2 * glow
+    right, left = x0 + slots * pitch + 2 * glow, x0 - room * pitch - pad
+    L.text(id, int(left), int(top + font(f)['baseline'] - pad), int(right - left), txt, f, kw.pop('color', 'fg'), align='right',
+           glow=True, **kw)
+
+
+lab('rpm_l', 400, 182, 19, 15, 'RPM')
+lab('rpm_x', 1420, 182, 19, 15, '×1000')
+tick = font('vf_tick')['glyphs']['0']['advance']
+L.w.append({'id': 'rpm_scale', 'type': 'scale', 'z': 5, 'x': int(round(516 - tick / 2)), 'w': int(round(880 + tick)),
+            'y': int(round(css_base(210, 19, STM, 15) - font('vf_tick')['baseline'])), 'h': font('vf_tick')['cellHeight'],
+            'font': 'vf_tick', 'color': 'dim', 'redFrom': True})
+for id, x, mode in (('m_comfort', 760, 'COMFORT'), ('m_sport', 900, 'SPORT'), ('m_eco', 1010, 'ECO PRO')):
+    lab(id, x, 244, 24, 20, mode, 'ghost', w=112, glow='lit', lit={'when': 'mode:' + mode, 'color': 'fg'})
+lab('m_shift', 1130, 244, 24, 20, 'SHIFT', 'ghost', w=90, glow='lit', rate=25, lit={'when': 'shift', 'color': 'orange', 'blink': 125})
+lab('gear_l', 730, 282, 19, 15, 'GEAR')
+seg('gear', 'vf_gear', 890, 284, 1, 170, 6, '{{gearnum}}', room=0)
+L.w[-1]['h'] -= 2                       # clear of the speed's box (a box overlapping another goes on a sheet of its own)
+seg('speed', 'vf_speed', 843, 532, 3, 82, 4, '{{speed}}', room=0)
+lab('speed_u', 1104, 612, 22, 18, '{{u:speed}}', w=90)
+warn = lambda r: {'warnFlash': False, 'rate': 100, 'lit': {'when': 'warn:' + r, 'color': 'red', 'blink': 500}}
+for key, top, label, val in (('oil', 266, 'OIL TEMP', '{{oil}}'), ('coolant', 370, 'COOLANT', '{{coolant}}'), ('fuel', 474, 'FUEL', '{{fuelPct}}')):
+    lab(key + '_l', 204, top, 21, 17, label)
+    if key == 'fuel':
+        seg('fuel', 'vf_val', 204, top + 26, 3, 36, 3, val)
+        lab('fuel_u', 312, top + 52, 21, 17, '%', w=24)
+    else:
+        seg(key, 'vf_val', 204, top + 26, 3, 36, 3, val, **warn(key))
+        lab(key + '_u', 330, top + 52, 21, 17, '{{u:temp}}', w=40)
+        lab(key + '_hot', 574, top, 21, 17, 'HOT', 'ghost', w=56, glow='lit', rate=100, lit={'when': 'warn:' + key, 'color': 'red', 'blink': 500})
+lab('fuel_e', 204, 604, 19, 15, 'E', w=20)
+lab('fuel_h', 404, 604, 19, 15, '½', w=20)
+lab('fuel_f', 612, 604, 19, 15, 'F', w=20)
+lab('boost_l', 1294, 266, 21, 17, 'BOOST')
+seg('boost', 'vf_val', 1294, 292, 3, 36, 3, '{{boost}}')
+lab('boost_u', 1440, 318, 21, 17, '{{u:boost}}', w=60)
+lab('g_l', 1294, 392, 21, 17, 'G LOAD')
+seg('g', 'vf_val', 1294, 420, 2, 36, 3, '{{gNow}}')
+lab('g_u', 1376, 454, 21, 17, 'G', w=24)
+seg('clock', 'vf_row', 206, 664, 2, 28, 2, '{{time}}', room=0)
+L.w[-1].update({'x': 190, 'w': 280 + 2 * 28 + 4 - 190})       # hours in two slots from 206, the colon, minutes from 280
+lab('am', 350, 664, 19, 15, 'AM', 'ghost', w=40, glow='lit', lit={'when': 'ampm:AM', 'color': 'fg'})
+lab('pm', 350, 682, 19, 15, 'PM', 'ghost', w=40, glow='lit', lit={'when': 'ampm:PM', 'color': 'fg'})
+lab('range_l', 810, 680, 18, 14, 'RANGE', w=60)
+seg('range', 'vf_row', 898, 664, 3, 28, 2, '{{range}}')
+lab('range_u', 992, 680, 20, 16, '{{u:dist}}', w=40)
+lab('out_l', 1500, 680, 18, 14, 'EXT', w=40)
+seg('out', 'vf_row', 1556, 664, 2, 28, 2, '{{ambientN}}', room=0)
+lab('out_u', 1620, 680, 20, 16, '{{u:temp}}', w=40)
+L.write()

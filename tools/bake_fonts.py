@@ -17,7 +17,7 @@ character. `ox` shifts a cell from the pen position (ink overhang), `advance`
 moves the pen. Digits get one shared advance (tabular), so a changing number
 doesn't shift sideways.
 """
-import base64, json, os
+import base64, json, math, os
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -138,6 +138,20 @@ CLUSTER_FONTS = [
     ('ob_row', 'SpaceMono-400.ttf', 18, UPPER + DIGITS + ':°. -', 0, None, None, '', {'track': 4}),
     ('ob_tick', 'SpaceMono-400.ttf', 12, DIGITS),
     ('ob_alert', 'SpaceMono-700.ttf', 16, UPPER + DIGITS + ' ·°.-', 0, None, None, '', {'track': 4}),
+    # VFD (the canvas's "T4 · VFD", an 80s vacuum-fluorescent dash): Share Tech Mono (SIL OFL) at the design's sizes, caps
+    # spaced .18em; the numbers in seven segments drawn from the design's own geometry (bake_seg, below)
+    ('vf_14', 'ShareTechMono-Regular.ttf', 14, UPPER + ' ', 0, None, None, '', {'track': 2.52}),
+    ('vf_15', 'ShareTechMono-Regular.ttf', 15, UPPER + DIGITS + ' ½×', 0, None, None, '', {'track': 2.7}),
+    ('vf_16', 'ShareTechMono-Regular.ttf', 16, UPPER + ' °', 0, None, None, '', {'track': 2.88}),
+    ('vf_17', 'ShareTechMono-Regular.ttf', 17, UPPER + ' °%', 0, None, None, '', {'track': 3.06}),
+    ('vf_18', 'ShareTechMono-Regular.ttf', 18, UPPER + ' /', 0, None, None, '', {'track': 3.24}),
+    ('vf_20', 'ShareTechMono-Regular.ttf', 20, UPPER + ' ', 0, None, None, '', {'track': 3.6}),
+    ('vf_tick', 'ShareTechMono-Regular.ttf', 15, DIGITS),
+    # name, '7SEG', segment thickness, digit width, height, cell pitch, glow radius, characters
+    ('vf_gear', '7SEG', 26, 140, 226, 170, 6, DIGITS + 'PRND-'),
+    ('vf_speed', '7SEG', 14, 66, 104, 82, 4, DIGITS + '-'),
+    ('vf_val', '7SEG', 8, 26, 60, 36, 3, DIGITS + '-.'),
+    ('vf_row', '7SEG', 5, 20, 36, 28, 2, DIGITS + '-:', True),
     # Sakura: pixel fonts (SIL OFL), drawn without anti-aliasing so every font pixel stays a hard square. Press Start 2P
     # is an 8x8 font: at multiples of 32 px each font pixel is a whole number of the theme's 4 px art pixels.
     # Silkscreen for the English labels, DotGothic16 (16-dot) at 32 px for the Japanese ones (2 px a dot).
@@ -229,6 +243,72 @@ def bake(out, name, file, size, chars, stroke=0, weight=None, subs=None, tuck=''
     print('%-6s %3dpx  cell height %3d  atlas %dx%d  %d glyphs' % (name, size, height, ATLAS_W, atlas_h, len(glyphs)))
 
 
+SEG7 = {'0': 'abcdef', '1': 'bc', '2': 'abdeg', '3': 'abcdg', '4': 'bcfg', '5': 'acdfg', '6': 'acdefg', '7': 'abc', '8': 'abcdefg',
+        '9': 'abcdfg', '-': 'g', 'P': 'abefg', 'R': 'eg', 'N': 'ceg', 'D': 'bcdeg'}   # R and N as r and n: seven segments can't draw R or N
+SEG_SKEW = 0.105104   # tan 6 degrees: the VFD design's skewX(-6deg) round each digit's bottom-left corner
+
+
+def seg_polys(t, W, H):
+    """The VFD design's (T4 · VFD on the canvas) seven segments, digit-local px (y down, unskewed): hexagons with 45 degree
+    tips, tips 0.68 t in from the corners, 0.18 t either side of the middle (its numbers: t 26, W 140, H 226 the gear)."""
+    tip, h, Lv = 0.68 * t, t / 2, (H / 2 - 0.86 * t) / 2
+    def hor(yc): return [(tip, yc), (tip + h, yc - h), (W - tip - h, yc - h), (W - tip, yc), (W - tip - h, yc + h), (tip + h, yc + h)]
+    def ver(xc, y0, y1): return [(xc, y0), (xc + h, y0 + h), (xc + h, y1 - h), (xc, y1), (xc - h, y1 - h), (xc - h, y0 + h)]
+    up, lo = (tip, tip + 2 * Lv), (H - tip - 2 * Lv, H - tip)
+    return {'a': hor(h), 'g': hor(H / 2), 'd': hor(H - h), 'f': ver(h, *up), 'b': ver(W - h, *up), 'e': ver(h, *lo), 'c': ver(W - h, *lo)}
+
+
+def bake_seg(out, name, t, W, H, pitch, glow, chars, colon=False):
+    """A seven-segment font drawn from the VFD design's geometry (no TTF): every digit cell `pitch` wide, `.` a square in the
+    gap after the digit before it (no advance), `:` two squares (the clock's, unskewed) in a 3.6 t gap. The cluster's text
+    glow is a blur of radius size / 24, so `size` is 24 x `glow` and the cell keeps 2 glow radii of room round the ink.
+    A digit is drawn DELTA px right of its pen: a right-aligned box ends DELTA px after its last cell, so the glow isn't
+    cut there; the layout puts the box's right edge at the first slot + n x pitch + DELTA."""
+    S, pad, k = 4, 2 + 2 * glow, SEG_SKEW
+    DELTA = 2 * glow
+    polys = seg_polys(t, W, H)
+    cw = int(math.ceil(W + k * H)) + 2 * pad
+    ch = H + 2 * pad
+    def render(shapes, x0, w, skew=True):
+        img = Image.new('L', (w * S, ch * S), 0)
+        d = ImageDraw.Draw(img)
+        for p in shapes:
+            d.polygon([((x + (k * (H - y) if skew else 0) - x0 + pad) * S, (y + pad) * S) for x, y in p], fill=255)
+        return img.resize((w, ch), Image.BOX)
+    cells = []
+    for c in chars:
+        if c == ' ':
+            cells.append((c, None, 0, pitch))
+        elif c == '.':
+            x0 = W + 0.175 * t
+            sq = [(x0, H - t), (x0 + 0.9 * t, H - t), (x0 + 0.9 * t, H - 0.1 * t), (x0, H - 0.1 * t)]
+            w = int(math.ceil(0.9 * t + k * t)) + 2 * pad
+            cells.append((c, render([sq], x0, w), round(x0 - pad - pitch - DELTA), 0))
+        elif c == ':':
+            sq = lambda y: [(0.8 * t, y), (1.8 * t, y), (1.8 * t, y + t), (0.8 * t, y + t)]
+            w = int(math.ceil(t)) + 2 * pad
+            cells.append((c, render([sq(0.222 * H), sq(0.667 * H)], 0.8 * t, w, skew=False), round(0.8 * t - pad - DELTA), round(3.6 * t)))
+        else:
+            cells.append((c, render([polys[s] for s in SEG7[c]], 0, cw), -pad - DELTA, pitch))
+    x = y = 0
+    glyphs, imgs = {}, []
+    for c, img, ox, adv in cells:
+        if img is None:
+            glyphs[c] = {'x': 0, 'y': 0, 'w': 0, 'h': 0, 'ox': 0, 'advance': adv}
+            continue
+        if x + img.width > ATLAS_W: x, y = 0, y + ch
+        glyphs[c] = {'x': x, 'y': y, 'w': img.width, 'h': img.height, 'ox': ox, 'advance': adv}
+        imgs.append((x, y, img))
+        x += img.width
+    atlas = Image.new('L', (ATLAS_W, y + ch), 0)
+    for gx, gy, img in imgs: atlas.paste(img, (gx, gy))
+    meta = {'source': 'seven segments (tools/bake_fonts.py bake_seg)', 'size': 24 * glow, 'cellHeight': ch, 'baseline': pad + H,
+            'glyphs': glyphs, 'width': ATLAS_W, 'height': y + ch, 'alpha': base64.b64encode(atlas.tobytes()).decode('ascii')}
+    with open(os.path.join(out, name + '.json'), 'w') as f:
+        json.dump(meta, f, separators=(',', ':'), ensure_ascii=False)
+    print('%-8s seven segments %dx%d  cell height %3d  %d glyphs' % (name, W, H, ch, len(glyphs)))
+
+
 if __name__ == '__main__':
     import sys
     # --only PREFIX: bake just the fonts whose name starts with it (a new theme's fonts without re-baking the rest)
@@ -244,5 +324,6 @@ if __name__ == '__main__':
         print(app)
         for spec in FONTS[app]:
             if not spec[0].startswith(only): continue
-            if isinstance(spec[-1], dict): bake(out, *spec[:-1], **spec[-1])
+            if spec[1] == '7SEG': bake_seg(out, spec[0], *spec[2:])
+            elif isinstance(spec[-1], dict): bake(out, *spec[:-1], **spec[-1])
             else: bake(out, *spec)

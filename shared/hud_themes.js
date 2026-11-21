@@ -316,6 +316,11 @@ THEMES.evaurora = sceneTheme('Aurora', { fg: [244, 246, 250, 255], dim: [138, 14
 THEMES.orbital = sceneTheme('Orbital', { fg: [238, 243, 255, 255], dim: [114, 130, 168, 255], sec: [125, 249, 255, 255],
     orange: [255, 159, 67, 255], amber: [255, 200, 87, 255], red: [255, 92, 122, 255], ink: [2, 3, 10, 255] },
     [[125, 249, 255], [255, 159, 67], [255, 200, 87], [255, 92, 122]]);
+// VFD (the canvas's T4 · VFD, an 80s vacuum-fluorescent dash), its cyan filter: the lit phosphor, the unlit segments
+// ("ghost", also the labels that aren't lit), the label grey-green, the warning red and the shift flash orange
+THEMES.vfd = sceneTheme('VFD', { fg: [111, 255, 233, 255], ghost: [14, 41, 37, 255], dim: [62, 124, 116, 255], sec: [111, 255, 233, 255],
+    red: [255, 75, 43, 255], orange: [255, 157, 59, 255], glow: 0.9 },
+    [[111, 255, 233], [14, 41, 37], [255, 75, 43], [255, 157, 59]]);
 THEMES.seasons = sceneTheme('Four Seasons', { fg: [255, 255, 255, 255], dim: [222, 232, 246, 255], sec: [240, 246, 255, 255] },
     [[18, 24, 38], [255, 255, 255], [255, 70, 70], [44, 46, 54]]);
 Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });

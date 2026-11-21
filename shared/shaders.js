@@ -3273,9 +3273,115 @@ void main() {
 }
 `;
 
+// VFD (T4 · VFD on the canvas, an 80s vacuum-fluorescent dash): near-black glass with three recessed panels and a faint
+// sheen, the revs as a 40-bar skyline rising to the right (red at the shift point, flashing orange at 4 Hz), segmented
+// bars for oil and coolant (red over their limits), fuel and boost, a 7 x 7 dot grid with the G dot lit (0.2 g a step),
+// and every digit's unlit segments, the ghost 8s; the lit segments are text over them (the vf_* seven-segment fonts,
+// tools/bake_fonts.py bake_seg, the same geometry). c1 the lit phosphor, c2 unlit segments, c3 the shift red, c4 the
+// flash orange.
+const SCENE_VFD = SCENE_HEAD + `uniform vec4 u_a;
+uniform vec4 u_b;
+uniform vec4 u_g;
+const vec3 BG = vec3(0.008, 0.031, 0.027);
+const vec3 PANEL = vec3(0.016, 0.055, 0.047);
+const vec3 RIM = vec3(0.047, 0.102, 0.094);
+float rbox(vec2 p, vec4 b, float r) { vec2 q = abs(p - b.xy - b.zw * 0.5) - b.zw * 0.5 + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+// distance to the segments of an 8 (and its decimal point when dp), digit-local px before the 6 degree slant;
+// g: segment thickness, digit width, height. Folded to a quarter: the top bar, the middle bar, the upper left bar.
+float seg8(vec2 q, vec3 g, float dp) {
+    float h = 0.5 * g.x, L = 0.5 * g.y - 0.68 * g.x, Lv = 0.25 * g.z - 0.43 * g.x;
+    vec2 f = vec2(min(q.x, g.y - q.x), min(q.y, g.z - q.y));
+    float m = abs(q.x - 0.5 * g.y), n = abs(f.y - h), k = 0.5 * g.z - f.y;
+    float d = min(max(n - h, (n + m - L) * 0.7071), max(k - h, (k + m - L) * 0.7071));
+    n = abs(f.x - h);
+    m = abs(f.y - 0.68 * g.x - Lv);
+    d = min(d, max(n - h, (n + m - Lv) * 0.7071));
+    vec2 b = abs(q - vec2(g.y + 0.625 * g.x, g.z - 0.55 * g.x)) - 0.45 * g.x;
+    return dp > 0.5 ? min(d, max(b.x, b.y)) : d;
+}
+// a row of n bars (sz, every pitch px from the top-left at), the first lit of them in col with its glow, the rest unlit
+vec3 bars(vec2 p, vec3 c, vec2 at, float n, float pitch, vec2 sz, float lit, vec3 col) {
+    vec2 q = p - at;
+    if (q.y < -12.0 || q.y > sz.y + 12.0 || q.x < -12.0 || q.x > n * pitch + 12.0) return c;
+    float i = clamp(floor((q.x + 0.5 * (pitch - sz.x)) / pitch), 0.0, n - 1.0);
+    vec2 b = abs(q - vec2(i * pitch + 0.5 * sz.x, 0.5 * sz.y)) - 0.5 * sz;
+    float d = length(max(b, 0.0)) + min(max(b.x, b.y), 0.0);
+    bool on = i < lit - 0.5;
+    if (d < 0.0) return on ? col : u_c2;
+    return on ? c + col * 0.42 * exp(-d / 3.5) : c;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec3 c = BG;
+    // the three panels: a 2 px rim, recessed (darker towards their edges)
+    vec4 pr = p.x < 675.0 ? vec4(180.0, 248.0, 470.0, 384.0) : p.x < 1245.0 ? vec4(700.0, 230.0, 520.0, 420.0) : vec4(1270.0, 248.0, 470.0, 384.0);
+    float pd = rbox(p, pr, 14.0);
+    if (pd < 0.0) c = pd > -2.0 ? RIM : PANEL * (1.0 - 0.4 * (1.0 - smoothstep(0.0, 26.0, -pd - 2.0)));
+    // the glass sheen: white at 3.5 % fading out by 35 % along a 115 degree line
+    float sh = dot(p - vec2(960.0, 360.0), vec2(0.9063, 0.4226)) / 2044.5 + 0.5;
+    c = mix(c, vec3(1.0), 0.035 * max(0.0, 1.0 - sh / 0.35));
+    bool shift = u_g.w > 0.5;
+    // the rev skyline: 40 bars 14 px wide every 22 px from 520, 14 px tall rising to 64, standing on y 206
+    vec2 rq = p - vec2(520.0, 142.0);
+    if (rq.x > -12.0 && rq.x < 892.0 && rq.y > -12.0 && rq.y < 76.0) {
+        float i = clamp(floor((rq.x + 4.0) / 22.0), 0.0, 39.0);
+        float bh = floor(14.0 + i * 50.0 / 39.0 + 0.5);
+        vec2 b = abs(p - vec2(527.0 + i * 22.0, 206.0 - 0.5 * bh)) - vec2(7.0, 0.5 * bh);
+        float d = length(max(b, 0.0)) + min(max(b.x, b.y), 0.0);
+        bool on = i < floor(u_v.y * 40.0 + 0.5) - 0.5;
+        vec3 col = shift ? (u_v.z > 0.5 ? u_c4 : u_c3) : u_c1;
+        if (d < 0.0) c = on ? col : u_c2;
+        else if (on && !(shift && u_v.z < 0.5)) c += col * 0.45 * exp(-d / 4.0);
+    }
+    // oil and coolant (red over their limits), fuel, boost
+    c = bars(p, c, vec2(390.0, 310.0), 12.0, 20.0, vec2(14.0, 28.0), floor(u_b.x * 12.0 + 0.5), u_a.x > 0.5 ? u_c3 : u_c1);
+    c = bars(p, c, vec2(390.0, 414.0), 12.0, 20.0, vec2(14.0, 28.0), floor(u_b.y * 12.0 + 0.5), u_g.z > 0.5 ? u_c3 : u_c1);
+    c = bars(p, c, vec2(204.0, 580.0), 20.0, 21.0, vec2(15.0, 20.0), floor(u_b.z * 20.0 + 0.5), u_c1);
+    c = bars(p, c, vec2(1500.0, 310.0), 12.0, 18.0, vec2(12.0, 28.0), floor(u_b.w * 12.0 + 0.5), u_c1);
+    // the G grid: 7 x 7 dots 26 px apart round 1607,503, the one at the G lit (0.2 g a step), cross hairs over them
+    vec2 gq = p - vec2(1607.0, 503.0);
+    if (abs(gq.x) < 100.0 && abs(gq.y) < 100.0) {
+        vec2 cell = clamp(floor(gq / 26.0 + 0.5), -3.0, 3.0), gl = clamp(floor(u_g.xy / 0.2 + 0.5), -3.0, 3.0);
+        c = mix(c, cell == gl ? u_c1 : u_c2, clamp(9.5 - length(gq - cell * 26.0), 0.0, 1.0));
+        float ld = length(gq - gl * 26.0);
+        if (ld > 9.0) c += u_c1 * 0.5 * exp(-(ld - 9.0) / 4.0);
+        if ((gq.x > -1.0 && gq.x < 1.0 && abs(gq.y) < 92.0) || (gq.y > -1.0 && gq.y < 1.0 && abs(gq.x) < 92.0)) c = u_c2;
+    }
+    // the ghost 8s: every digit slot's segments unlit (x, y of its first slot, slots, pitch; thickness, width, height)
+    vec4 R;
+    vec3 G;
+    float dp = 0.0;
+    if (p.y > 650.0) {
+        G = vec3(5.0, 20.0, 36.0);
+        R = vec4(p.x < 270.0 ? 206.0 : p.x < 600.0 ? 280.0 : p.x < 1300.0 ? 898.0 : 1556.0, 664.0, p.x > 600.0 && p.x < 1300.0 ? 3.0 : 2.0, 28.0);
+    } else if (p.x < 675.0) {
+        G = vec3(8.0, 26.0, 60.0);
+        R = vec4(204.0, p.y < 375.0 ? 292.0 : p.y < 479.0 ? 396.0 : 500.0, 3.0, 36.0);
+    } else if (p.x > 1245.0) {
+        G = vec3(8.0, 26.0, 60.0);
+        R = p.y < 387.0 ? vec4(1294.0, 292.0, 3.0, 36.0) : vec4(1294.0, 420.0, 2.0, 36.0);
+        dp = 1.0;
+    } else if (p.y < 521.0) {
+        G = vec3(26.0, 140.0, 226.0);
+        R = vec4(890.0, 284.0, 1.0, 170.0);
+    } else {
+        G = vec3(14.0, 66.0, 104.0);
+        R = vec4(843.0, 532.0, 3.0, 82.0);
+    }
+    vec2 q = p - R.xy;
+    if (q.y > -2.0 && q.y < G.z + 2.0 && q.x > -4.0 && q.x < R.z * R.w + 0.2 * G.z) {
+        q.x -= 0.105104 * (G.z - q.y);
+        float i = clamp(floor(q.x / R.w), 0.0, R.z - 1.0);
+        c = mix(c, u_c2, clamp(0.5 - seg8(q - vec2(i * R.w, 0.0), G, dp), 0.0, 1.0));
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
 module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA, photo: PHOTO,
     scene_synth: SCENE_SYNTH, scene_warp: SCENE_WARP, scene_neon: SCENE_NEON, scene_jet: SCENE_JET, scene_paper: SCENE_PAPER, scene_seasons: SCENE_SEASONS,
     scene_chrono: SCENE_CHRONO, scene_aurora: SCENE_AURORA, scene_trails: SCENE_TRAILS,
     scene_falls: SCENE_FALLS, scene_swim: SCENE_SWIM,
     scene_train: SCENE_TRAIN, scene_rain: SCENE_RAIN, scene_orbit: SCENE_ORBIT,
-    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL };
+    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL, scene_vfd: SCENE_VFD };

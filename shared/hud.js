@@ -196,7 +196,8 @@
  *             viaduct in snowy mountains), "rain" Rainy Window (a rainy neon city through a window, a cat on the sill),
  *             "orbit" Station Window (Earth turning below a space station's window, a sunrise); from the design canvas:
  *             "glass" Aurora (EV glass: frosted cards, a glowing ring gauge), "orbital" Orbital (space telemetry: the revs
- *             as a satellite going round an orbit over a planet's horizon). Colour roles "c1".."c4" (each shader's header says what they
+ *             as a satellite going round an orbit over a planet's horizon), "vfd" VFD (an 80s vacuum-fluorescent dash: a
+ *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text). Colour roles "c1".."c4" (each shader's header says what they
  *             are), "keep" [x0, y0, x1, y1] see-through, "nightDim" (0.75) at night. Their numbers are text widgets.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
  * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
@@ -232,6 +233,10 @@
  *   plain label follow that reading's limit.
  * Text "showWhen": "shift" (at the shift point, blinking at 4 Hz with Sakura's blossoms: give it "rate": 25) / "!shift",
  *   "warn:oil" | "warn:coolant" | "warn:boost" (that reading over its warning limit) / "!warn:...".
+ * Text "lit": { "when": "shift" | "mode:COMFORT" | "mode:SPORT" | "mode:ECO PRO" | "ampm:AM" | "ampm:PM" | "warn:oil" | "warn:coolant",
+ *   "color": a role (fg), "blink": ms (optional) }: the text takes that colour while the condition holds, and with "blink" it is
+ *   hidden every other "blink" ms (give the text a "rate" under it); the VFD theme's labels that light up like a dash's.
+ *   "glow": "lit" glows only while lit.
  * Text "showWhen": "abnormal" (or "abnormal:oil" / "abnormal:coolant" on a plain label): empty while that temperature is
  *   normal and the setting "smartTemps" is on; temperature values take their band's colour, outside blue at 3 C and
  *   under (smart_temps.js).
@@ -407,7 +412,7 @@ const PHOTO_STAR_RAD = 0.6;
 const PHOTO_HEART_S = 4;
 // Scene themes (widget type "scene", shaders.js scene_*): which of the scene inputs each scene's shader declares (u_a its
 // clocks, u_b its numbers, u_g the g), so only those are sent; u_v, u_keep, u_c1..u_c4 and u_dim go to every scene
-const SCENE_USES = { synth: 'a', warp: 'a', neon: 'a', jet: 'gb', paper: 'b', seasons: 'ab', chrono: 'ab', aurora: 'a', trails: 'a', falls: 'a', swim: 'a', train: 'a', rain: 'a', orbit: 'a', glass: 'abg', orbital: 'abg' };
+const SCENE_USES = { synth: 'a', warp: 'a', neon: 'a', jet: 'gb', paper: 'b', seasons: 'ab', chrono: 'ab', aurora: 'a', trails: 'a', falls: 'a', swim: 'a', train: 'a', rain: 'a', orbit: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg' };
 const SCENE_SPEED = 200;              // km/h at u_v.x = 1
             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
@@ -1517,6 +1522,16 @@ class HudApp {
         return this._overLimit(id);
     }
     /** `id` (oil / coolant / boost) if that reading is over its warning limit now, else null. */
+    /** A text's "lit" condition: "shift" (at the shift point), "mode:SPORT" (the drive mode starts so), "ampm:PM", "warn:coolant". */
+    _litNow(when) {
+        const i = String(when).indexOf(':'), k = i < 0 ? when : when.slice(0, i), v = i < 0 ? '' : when.slice(i + 1);
+        if (k === 'shift') return !!this._shift().now;
+        if (k === 'mode') return this._token('mode').indexOf(v) === 0;
+        if (k === 'ampm') return this._token('ampm') === v;
+        if (k === 'warn') return this._overLimit(v);
+        return false;
+    }
+
     _overLimit(id) {
         if (!WARN[id]) return null;
         const lim = this.setting(WARN[id]), v = this._raw(id);
@@ -2852,15 +2867,16 @@ class HudApp {
             x.flow = ((x.flow || 0) + dt * (0.8 + 1.6 * (isNum(rpm) ? Math.min(1, rpm / max) : 0))) % 1000;
             x.sky = ((x.sky || 0) + dt * (0.15 + 2.2 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
             send('u_a', [Math.round(x.flow * 100) / 100, Math.round(x.sky * 1000) / 1000, r2(sec), Math.round((D * 0.4) % 18000)]);
-        } else if (s === 'glass' || s === 'orbital') {
+        } else if (s === 'glass' || s === 'orbital' || s === 'vfd') {
             // the canvas designs: their bars as the designs scale them (oil 100..300 F, coolant 100..260 F, fuel, boost
             // 0..25 psi), the G dot (screen directions, as the G-meter's), the coolant over its limit, the shift point
             const F = (v) => v * 1.8 + 32, oil = this._raw('oil'), cool = this._raw('coolant'), fuel = this._raw('fuel'), bst = this._raw('boost');
             send('u_b', [isNum(oil) ? q((F(oil) - 100) / 200) : 0, isNum(cool) ? q((F(cool) - 100) / 160) : 0, isNum(fuel) ? q(fuel) : 0,
                 isNum(bst) ? q(Math.max(0, bst) * 14.5038 / 25) : 0]);
-            const S = this._gSigns(w), gx = this._raw('gLat'), gy = this._raw('gLong');
-            send('u_g', [isNum(gx) ? r2(S[0] * gx) : 0, isNum(gy) ? r2(S[1] * gy) : 0, this._overLimit('coolant') ? 1 : 0, this._shift().now ? 1 : 0]);
-            send('u_a', [r2(sec), 0, 0, 0]);
+            // (the VFD's dot shows the load the driver feels, as its design: speeding up puts it below the middle)
+            const S = this._gSigns(w), gx = this._raw('gLat'), gy = this._raw('gLong'), k = s === 'vfd' ? -1 : 1;
+            send('u_g', [isNum(gx) ? r2(k * S[0] * gx) : 0, isNum(gy) ? r2(k * S[1] * gy) : 0, this._overLimit('coolant') ? 1 : 0, this._shift().now ? 1 : 0]);
+            send('u_a', s === 'vfd' ? [this._overLimit('oil') ? 1 : 0, 0, 0, 0] : [r2(sec), 0, 0, 0]);   // VFD: the oil bars red over its limit
         } else if (s === 'train') {
             // the viaduct moves 2.2 art px a metre (60 a second at 100 km/h), the hills and peaks behind at a fraction
             x.steam = ((x.steam || 0) + dt * (0.25 + 1.3 * (isNum(rpm) ? Math.min(1, rpm / max) : 0))) % 1000;
@@ -2910,6 +2926,12 @@ class HudApp {
             // ("warnFlash": false: not on a tile that turns red itself, the Dyno theme's)
             if (w.warnColor && this._warning(w)) role = w.warnColor;
             else if (w.warnFlash !== false && this._warning(w) && Math.floor(now / WARN_FLASH_MS) % 2 === 0) role = 'hot';
+            // "lit": a label that lights up (the VFD's drive modes, AM / PM, SHIFT, HOT), blinking if it has "blink"
+            const litOn = !!w.lit && this._litNow(w.lit.when);
+            if (litOn) {
+                role = w.lit.color || 'fg';
+                if (w.lit.blink && Math.floor(now / w.lit.blink) % 2 === 1) s = '';
+            }
             const key = s + '|' + role;
             if (!force && key === x.last) return;
             x.last = key; x.lastPaint = now;
@@ -2932,7 +2954,7 @@ class HudApp {
             const buf = textRaster.drawText(w.w, w.h, s, {
                 font, offsetY, color: color(this.theme, role), align: w.align, spacing: w.spacing,
                 color2: w.color2 && role !== 'hot' ? color(this.theme, w.color2) : null,
-                glow: w.glow ? this.theme.glow : 0,
+                glow: (w.glow === 'lit' ? litOn : w.glow) ? this.theme.glow : 0,   // "glow": "lit": only while its "lit" holds
             });
             this._blitDiff(x, buf);
         } else if (w.type === 'badge') {
