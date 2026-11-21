@@ -298,6 +298,10 @@ THEMES.evaurora = sceneTheme('Aurora', { fg: [244, 246, 250, 255], dim: [138, 14
 THEMES.orbital = sceneTheme('Orbital', { fg: [238, 243, 255, 255], dim: [114, 130, 168, 255], sec: [125, 249, 255, 255],
     orange: [255, 159, 67, 255], amber: [255, 200, 87, 255], red: [255, 92, 122, 255], ink: [2, 3, 10, 255] },
     [[125, 249, 255], [255, 159, 67], [255, 200, 87], [255, 92, 122]]);
+// My Family (layout family.json): the family at a Dutch canal at blue hour (shaders.js scene_canal, its own palette);
+// the text in warm cream, lavender and lamp-light
+THEMES.family = sceneTheme('My Family', { fg: [255, 243, 223, 255], dim: [196, 182, 226, 255], sec: [255, 214, 160, 255] },
+    [[11, 16, 48], [255, 184, 97], [255, 77, 64], [255, 236, 190]]);
 // VFD (the canvas's T4 · VFD, an 80s vacuum-fluorescent dash) in its three phosphors at once: cyan in the middle (fg,
 // its labels dim, unlit ghost), amber on the left (amber, adim, aghost), green on the right (green, gdim, gghost); an unlit
 // label is its phosphor at 16 % as the shader's unlit segments; the warning red and the shift flash orange

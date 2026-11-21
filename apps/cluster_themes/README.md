@@ -65,6 +65,18 @@ A photo of a little one in the middle of the cluster, on a night-blue sky with f
 
 To make one from your own photo: `tools/bake_photo_art.py prep` cuts it out (it needs a cut-out on black, as a phone's "lift subject" gives), then `tools/bake_photo_art.py` bakes it and `tools/gen_myboy.py` lays it out.
 
+### My Family
+
+The family in the middle of the cluster, standing on a cobbled canal quay at blue hour, in pixel art: a row of gabled canal houses (step, neck, bell and spout gables and a church tower) with lit windows, a few going on and off, their reflections wobbling in the water, stars and a crescent moon, bikes and red bollards on the quay, and two old street lamps either side of the family.
+
+- **Revs:** two strings of fairy lights across the top, lit from their outer ends towards the family: warm white, then amber, then red from your redline. At the shift point every bulb turns red and pulses.
+- **The water** ripples faster the faster you drive.
+- **Readouts** as My Boy's: the drive mode and the speed on the left, the gear on the right, oil and coolant, fuel and range along the quay, the clock and the outside temperature at the bottom.
+
+The family is one picture (`tools/photo-src/family.png`, baked by `tools/bake_photo_art.py`, laid out by `tools/gen_family.py`); everything else is drawn by the GPU. Not yet tested on a car.
+
+<p align="center"><img src="../../docs/images/cluster-family.png" width="900" alt="My Family theme"></p>
+
 ### Retro 80s
 
 An 80s digital dash: amber seven-segment digits with their unlit 8s showing faintly behind, for the gear and the speed. A segmented rev bar runs across the top, bar graphs show oil, water and fuel on the left, and boost and two readouts sit on the right. The clock, range and outside temperature along the bottom are seven-segment digits too.

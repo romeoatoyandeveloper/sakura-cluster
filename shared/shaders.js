@@ -2563,6 +2563,149 @@ void main() {
 }
 `;
 
+// My Family: a Dutch canal at blue hour in pixel art, 3 x 3 panel px a pixel (640 x 240): a dithered sky from navy to
+// a warm glow over the roofs, twinkling stars and a crescent moon, a row of gabled canal houses (step, neck, bell and
+// spout gables, a church tower) with lit windows, a few going on and off, their reflections wobbling in the canal
+// (faster with the speed), a cobbled quay with bollards, two bikes and two old street lamps either side of the family,
+// who stand in the middle: the RGBA asset u_art at u_photo (x, y, w, h), drawn 1:1, a shadow at their feet. The revs:
+// two strings of twelve fairy lights across the top, lit from their outer ends towards the family (warm white, amber,
+// red from the redline), all red at the shift point, flashing. u_a: x the water's clock, y seconds, z the shift point.
+const SCENE_CANAL = SCENE_HEAD + `uniform vec4 u_a;
+uniform sampler2D u_art;
+uniform vec4 u_photo;
+const float WL = 140.0;
+const float QY = 187.0;
+const vec3 WARM = vec3(1.0, 0.72, 0.38);
+float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)); }
+float bayer2(vec2 a) { a = floor(a); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
+float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
+vec3 skyAt(float y) {
+    float t = clamp(y / WL, 0.0, 1.0);
+    vec3 c = mix(vec3(0.043, 0.063, 0.188), vec3(0.165, 0.149, 0.376), smoothstep(0.0, 0.5, t));
+    c = mix(c, vec3(0.416, 0.239, 0.451), smoothstep(0.45, 0.8, t));
+    c = mix(c, vec3(0.878, 0.502, 0.416), smoothstep(0.78, 0.94, t));
+    return mix(c, vec3(0.949, 0.698, 0.478), smoothstep(0.93, 1.0, t));
+}
+// a canal house at art px a (y down): rgb and 1 where a house is, 0 for the sky. The house is 18 px wide; the tenth is
+// the church tower.
+vec4 house(vec2 a) {
+    float i = floor(a.x / 18.0), lx = a.x - i * 18.0;
+    bool tower = abs(i - 9.0) < 0.5;
+    float h = tower ? 116.0 : 52.0 + floor(hash(vec2(i, 7.0)) * 40.0);
+    float dy = a.y - (WL - h);
+    if (dy < 0.0 || a.y >= WL) return vec4(0.0);
+    float k = floor(hash(vec2(i, 3.0)) * 4.0), G = 14.0, hw = 9.0;
+    if (tower) hw = dy < 30.0 ? 0.5 + dy * 0.12 : dy < 44.0 ? 4.0 : 6.0;
+    else if (dy < G) hw = k < 0.5 ? 2.0 + floor(dy / 3.5) * 2.0 : k < 1.5 ? (dy < 9.0 ? 3.0 : 3.0 + (dy - 9.0) * 1.2)
+        : k < 2.5 ? 9.0 * sqrt(dy / G) : 1.0 + dy * 0.6;
+    float cx = abs(lx + 0.5 - 9.0);
+    if (cx > hw) return vec4(0.0);
+    vec3 c = mix(vec3(0.13, 0.11, 0.23), vec3(0.20, 0.14, 0.26), hash(vec2(i, 11.0)));
+    if (cx > hw - 1.0 || dy < 1.0) c += vec3(0.07, 0.05, 0.06);
+    if (lx < 0.5) c *= 0.7;
+    float wy = dy - G - 3.0, row = floor(wy / 9.0), col = floor((lx - 3.0) / 5.0), cxw = mod(lx - 3.0, 5.0);
+    if (!tower && wy >= 0.0 && mod(wy, 9.0) < 5.0 && lx >= 3.0 && lx < 16.0 && cxw < 3.0 && a.y < WL - 2.0) {
+        float r = hash(vec2(i * 3.0 + col, row));
+        bool on = r + 0.06 * sin(u_a.y * 0.25 + r * 40.0) > 0.62;
+        c = on ? mix(vec3(1.0, 0.80, 0.44), vec3(1.0, 0.60, 0.30), hash(vec2(row, i))) : vec3(0.09, 0.08, 0.17);
+    }
+    if (tower && dy > 50.0 && dy < 58.0 && cx < 2.0) c = vec3(1.0, 0.85, 0.55);
+    return vec4(c, 1.0);
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    vec2 a = floor(p / 3.0);
+    vec2 ps = a * 3.0 + 1.5;
+    vec3 c;
+    bool side = p.x < 560.0 || p.x > 1360.0;
+    if (a.y < WL) {
+        vec4 hs = house(a);
+        c = skyAt(a.y);
+        float st = hash(a);
+        if (a.y < 90.0 && st > 0.994) c += vec3(0.55, 0.55, 0.6) * (0.55 + 0.45 * sin(u_a.y * (1.0 + st * 3.0) + st * 50.0));
+        vec2 mq = ps - vec2(1440.0, 104.0);
+        float md = length(mq);
+        if (md < 27.0 && length(mq - vec2(10.0, -7.0)) > 23.0) c = vec3(1.0, 0.94, 0.78);
+        c += vec3(0.5, 0.45, 0.35) * 0.18 * exp(-md / 60.0);
+        if (hs.a > 0.0) {
+            c = hs.rgb;
+            if (side && c.r > 0.8 && p.y > 210.0) c = mix(vec3(0.16, 0.12, 0.24), c, 0.4);
+        }
+    } else if (a.y < QY) {
+        float wy = a.y - WL, my = WL - 1.0 - floor(wy * 1.15);
+        float depth = wy / (QY - WL), wob = floor(sin(a.y * 0.45 + u_a.x * 2.0) * 1.2 + 0.5);
+        c = mix(vec3(0.075, 0.098, 0.22), vec3(0.05, 0.07, 0.16), depth);
+        vec4 r = house(vec2(a.x + wob, my));
+        if (r.a > 0.0) c = r.r > 0.8 ? c + (r.rgb - c) * 0.32 * (1.0 - depth) : mix(c, vec3(0.06, 0.05, 0.12), 0.45);
+        else c = mix(c, skyAt(my), 0.3);
+        float rip = hash(vec2(floor(a.x / 7.0 + u_a.x * (0.5 + 0.4 * hash(vec2(a.y, 2.0)))), a.y));
+        if (rip > 0.975) c += vec3(0.07, 0.07, 0.11);
+        for (int k = 0; k < 2; k++) {
+            float lx = k == 0 ? 735.0 : 1185.0;
+            float dx = abs(ps.x + wob * 3.0 - lx);
+            c += WARM * 0.35 * exp(-dx / 9.0) * (1.0 - wy / (QY - WL));
+        }
+    } else {
+        float qy = a.y - QY - 2.0, row = floor(qy / 4.0), bx = a.x + mod(row, 2.0) * 3.5, br = floor(bx / 7.0);
+        if (qy < 0.0) c = qy < -1.0 ? vec3(0.36, 0.31, 0.34) : vec3(0.24, 0.20, 0.24);
+        else c = (mod(bx, 7.0) < 1.0 || mod(qy, 4.0) < 1.0) ? vec3(0.09, 0.07, 0.10)
+            : mix(vec3(0.17, 0.14, 0.17), vec3(0.24, 0.19, 0.21), hash(vec2(br, row)));
+        for (int k = 0; k < 2; k++) {
+            float lx = k == 0 ? 735.0 : 1185.0;
+            c += WARM * 0.45 * exp(-length((ps - vec2(lx, 640.0)) / vec2(200.0, 70.0)));
+        }
+        float fd = length((p - vec2(960.0, 652.0)) / vec2(175.0, 13.0));
+        c *= 1.0 - 0.5 * (1.0 - smoothstep(0.5, 1.0, fd));
+    }
+    // bollards on the quay edge, every 36 px
+    float bm = mod(a.x, 36.0);
+    if (bm >= 17.0 && bm < 20.0 && a.y >= QY - 6.0 && a.y < QY + 2.0 && abs(p.x - 960.0) > 200.0)
+        c = a.y < QY - 5.0 ? vec3(0.55, 0.22, 0.20) : vec3(0.32, 0.10, 0.10);
+    // two bikes on the quay, by the lamps: wheels r 6.5 art px, 19 apart, the frame from line segments
+    for (int k = 0; k < 2; k++) {
+        vec2 o = a + 0.5 - vec2(k == 0 ? 188.0 : 427.0, QY + 15.0);
+        float d = min(abs(length(o) - 6.5), abs(length(o - vec2(19.0, 0.0)) - 6.5));
+        d = min(d, min(seg(o, vec2(0.0), vec2(8.0, 0.0)), seg(o, vec2(0.0), vec2(7.0, -8.0))));
+        d = min(d, min(seg(o, vec2(8.0, 0.0), vec2(6.5, -9.0)), seg(o, vec2(7.0, -8.0), vec2(16.0, -8.0))));
+        d = min(d, min(seg(o, vec2(8.0, 0.0), vec2(16.5, -6.5)), seg(o, vec2(19.0, 0.0), vec2(16.0, -10.0))));
+        d = min(d, min(seg(o, vec2(15.0, -10.5), vec2(19.5, -11.5)), seg(o, vec2(4.5, -9.5), vec2(8.5, -9.5))));
+        if (d < 0.75) c = vec3(0.04, 0.03, 0.07);
+    }
+    // the two street lamps: a post, a lantern, its glow
+    for (int k = 0; k < 2; k++) {
+        float lx = k == 0 ? 245.0 : 395.0;
+        vec2 o = a - vec2(lx, 0.0);
+        if (abs(o.x + 0.5) < 1.0 && a.y > 96.0 && a.y < 216.0) c = vec3(0.07, 0.06, 0.10);
+        if (abs(o.x + 0.5) < 2.0 && a.y > 206.0 && a.y < 216.0) c = vec3(0.07, 0.06, 0.10);
+        if (abs(o.x + 0.5) < 3.5 && a.y >= 84.0 && a.y < 96.0) c = (abs(o.x + 0.5) < 2.5 && a.y > 85.0 && a.y < 95.0) ? vec3(1.0, 0.86, 0.55) : vec3(0.07, 0.06, 0.10);
+        if (a.y >= 80.0 && a.y < 84.0 && abs(o.x + 0.5) < 1.0 + (a.y - 80.0)) c = vec3(0.07, 0.06, 0.10);
+        c += WARM * 0.55 * exp(-length(ps - vec2(lx * 3.0 + 1.5, 271.0)) / 40.0);
+    }
+    // the fairy lights: the left string from x 330 to 800, the right one its mirror, sagging 52 px from y 112
+    vec2 q = vec2(p.x < 960.0 ? ps.x : 1920.0 - ps.x, ps.y);
+    if (q.x > 285.0 && q.x < 845.0 && q.y > 78.0 && q.y < 215.0) {
+        float u = (q.x - 330.0) / 470.0, s2 = 2.0 * u - 1.0;
+        if (u >= 0.0 && u <= 1.0 && abs(q.y - (112.0 + 52.0 * (1.0 - s2 * s2))) < 1.6) c = vec3(0.06, 0.05, 0.09);
+        float k = clamp(floor(u * 11.0 + 0.5), 0.0, 11.0), bu = 2.0 * k / 11.0 - 1.0;
+        vec2 b = vec2(330.0 + k / 11.0 * 470.0, 122.0 + 52.0 * (1.0 - bu * bu));
+        float d = length(q - b);
+        bool lit = k < floor(u_drive.y * 12.0 + 0.5) - 0.5;
+        vec3 bc = (k + 0.5) / 12.0 >= u_drive.w ? vec3(1.0, 0.30, 0.25) : k >= 8.0 ? vec3(1.0, 0.68, 0.25) : vec3(1.0, 0.92, 0.72);
+        if (u_a.z > 0.5) bc = u_drive.z > 0.5 ? vec3(1.0, 0.32, 0.26) : vec3(0.55, 0.08, 0.08);
+        if (d < 7.5) c = lit ? bc : vec3(0.22, 0.19, 0.27);
+        else if (lit) c += bc * 0.5 * exp(-(d - 7.0) / 7.0) * smoothstep(36.0, 20.0, d);
+    }
+    // the family, 1:1
+    vec2 f = p - u_photo.xy;
+    if (f.x >= 0.0 && f.y >= 0.0 && f.x < u_photo.z && f.y < u_photo.w) {
+        vec4 t = texture2D(u_art, (floor(f) + 0.5) / u_photo.zw);
+        c = mix(c, t.rgb, t.a);
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
 module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA, photo: PHOTO,
     scene_synth: SCENE_SYNTH, scene_warp: SCENE_WARP, scene_paper: SCENE_PAPER, scene_trails: SCENE_TRAILS,
-    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL, scene_vfd: SCENE_VFD };
+    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL, scene_vfd: SCENE_VFD, scene_canal: SCENE_CANAL };

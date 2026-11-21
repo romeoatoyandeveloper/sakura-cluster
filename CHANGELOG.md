@@ -4,6 +4,10 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 21 2026
 
+- **Cluster Themes 0.21.2, HUD Widgets 0.15.3:**
+  - **New theme: My Family,** the family in the middle of the cluster on a cobbled canal quay at blue hour, in pixel art: gabled canal houses with lit windows and a church tower, their reflections in the water, stars and a crescent moon, bikes and red bollards, and two old street lamps either side of them. The revs are two strings of fairy lights across the top that light from their outer ends towards the family (warm white, amber, red from the redline) and all pulse red at the shift point; the water ripples faster the faster you drive. The readouts are as My Boy's. The family is one uploaded picture (1.4 MiB of the cluster's 16 MiB pixel memory), the rest is drawn by the GPU, three layers in all.
+  - HUD Widgets: no change you will see.
+  - Not yet tested on a car.
 - **Cluster Themes 0.21.1, HUD Widgets 0.15.2:**
   - **The seven new themes draw their backgrounds on the car.** Night Drive, Warp, Paper, Light Trails, Aurora, Orbital and VFD showed only their text over BMW's own cluster: their backdrop shader used the name `u_v` for its speed and revs, a name cluster-render keeps for its own 3D view matrix, so the car refused the layer. It has another name now. The shader check (`tools/shader_budget.js`, also run by the bench) now fails any shader using one of cluster-render's own names, which the bench's stand-in renderer didn't know about.
   - HUD Widgets: no change you will see.

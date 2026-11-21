@@ -190,7 +190,9 @@
  *             line), "trails" Light Trails (a long-exposure night highway); from the design canvas: "glass" Aurora (EV
  *             glass: frosted cards, a glowing ring gauge), "orbital" Orbital (space telemetry: the revs as a satellite going
  *             round an orbit over a planet's horizon), "vfd" VFD (an 80s vacuum-fluorescent dash in three phosphors: a
- *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text). Colour roles
+ *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text); "canal" My
+ *             Family (a Dutch canal at blue hour in pixel art, fairy lights for the revs, with a picture: "art" the
+ *             hud/art asset, "photo" [x, y] where it stands, 1:1). Colour roles
  *             "c1".."c4" (each shader's header says what they are), "keep" [x0, y0, x1, y1] see-through, "nightDim" (0.75)
  *             at night. Their numbers are text widgets.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
@@ -406,7 +408,7 @@ const PHOTO_STAR_RAD = 0.6;
 const PHOTO_HEART_S = 4;
 // Scene themes (widget type "scene", shaders.js scene_*): which of the scene inputs each scene's shader declares (u_a its
 // clocks, u_b its numbers, u_g the g), so only those are sent; u_drive, u_keep, u_c1..u_c4 and u_dim go to every scene
-const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg' };
+const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg', canal: 'a' };
 const SCENE_SPEED = 200;              // km/h at u_drive.x = 1
             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
@@ -2421,6 +2423,11 @@ class HudApp {
             if (uses.indexOf('a') >= 0) c.uniform(ref, 'u_a', [0, 0, 0, 0]);
             if (uses.indexOf('b') >= 0) c.uniform(ref, 'u_b', [0, 0, 0, 0]);
             if (uses.indexOf('g') >= 0) c.uniform(ref, 'u_g', [0, 0, 0, 0]);
+            if (w.art) {         // a picture in the scene (My Family's), drawn 1:1 at "photo" [x, y] (panel px)
+                const art = this._artAsset(x, w.art), a = art ? this.arts.get(x.ci + ':' + w.art) : null, ph = w.photo || [0, 0];
+                if (art) c.bind(ref, 'u_art', art);
+                c.uniform(ref, 'u_photo', a ? [ph[0] - w.x, ph[1] - w.y, a.w, a.h] : [0, 0, 0, 0]);
+            }
             x.uses = uses;
         } else if (w.type === 'photo') {
             // shaders.js photo: the art is the photo itself (tools/bake_photo_art.py), drawn 1:1, so its size is the art's
@@ -2811,6 +2818,7 @@ class HudApp {
      *   warp     u_a: how far through the stars (faster with the speed)
      *   paper    u_b: the thousands on the rev scale
      *   trails   u_a: the traffic's clock (faster with the speed), the dashes' phase, seconds
+     *   canal    u_a: the water's clock (faster with the speed), seconds, the shift point; its picture ("art", "photo") as u_art, u_photo
      *   glass,   u_b: oil, coolant, fuel, boost as their bars' fills; u_g: the G dot (g, screen directions; the VFD's
      *   orbital, the load the driver feels), coolant over its limit, the shift point; u_a: seconds (the VFD: oil over its
      *   vfd      limit)
@@ -2846,6 +2854,10 @@ class HudApp {
             const S = this._gSigns(w), gx = this._raw('gLat'), gy = this._raw('gLong'), k = s === 'vfd' ? -1 : 1;
             send('u_g', [isNum(gx) ? r2(k * S[0] * gx) : 0, isNum(gy) ? r2(k * S[1] * gy) : 0, this._overLimit('coolant') ? 1 : 0, this._shift().now ? 1 : 0]);
             send('u_a', s === 'vfd' ? [this._overLimit('oil') ? 1 : 0, 0, 0, 0] : [r2(sec), 0, 0, 0]);   // VFD: the oil bars red over its limit
+        } else if (s === 'canal') {
+            // the canal's ripples and the reflections' wobble, faster with the speed
+            x.water = ((x.water || 0) + dt * (0.5 + 2.5 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
+            send('u_a', [Math.round(x.water * 100) / 100, r2(sec), this._shift().now ? 1 : 0, 0]);
         } else if (s === 'trails') {
             x.traffic = ((x.traffic || 0) + dt * (0.04 + 1.5 * Math.min(1, kmh / SCENE_SPEED))) % 500;
             send('u_a', [Math.round(x.traffic * 1000) / 1000, r2((D / 9) % 1), r2(sec), 0]);
