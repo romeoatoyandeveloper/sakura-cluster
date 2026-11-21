@@ -25,7 +25,7 @@ mgu.run({
         hud.start();
         new Page(ctx, hud, {
             title: ctx.spec.title, what: 'cluster',
-            look: { name: 'Theme', style: 'hero', tags: { m: 'M8 style', sport: 'Live Cockpit', track: 'race dash · tyres', retro80s: '80s digital', cruise: 'calm · trip', ribbon: 'calm · holidays', nightdrive: 'synthwave', warp: 'warp speed', paper: 'e-ink page', trails: 'night highway', evaurora: 'EV glass', orbital: 'space telemetry', vfd: '80s VFD', family: 'canal at dusk', family_sakura: 'hanami night' } },
+            look: { name: 'Theme', style: 'hero', tags: { m: 'M8 style', sport: 'Live Cockpit', track: 'race dash · tyres', retro80s: '80s digital', cruise: 'calm · trip', ribbon: 'calm · holidays', nightdrive: 'synthwave', highway: 'palm highway', warp: 'warp speed', paper: 'e-ink page', trails: 'night highway', evaurora: 'EV glass', orbital: 'space telemetry', vfd: '80s VFD', family: 'canal at dusk', family_sakura: 'hanami night' } },
             tabs: ['look', 'readouts', 'badge', 'map', 'alerts', 'gmeter', 'settings'],
             settings: ['units', 'clock', 'timeZone', 'tankLitres', 'redline', 'shiftBefore', 'coldGuard', 'showBoost', 'nightDim', 'cameraNotch', 'holiday', 'demo'],
             // the drive mode check's candidates this app's app.json listens to (issue #8; shared/hud.js modeDiagLines)

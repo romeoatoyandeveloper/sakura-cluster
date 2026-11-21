@@ -116,6 +116,16 @@ Synthwave: a purple night sky over a neon grid that runs towards you as you driv
 
 <p align="center"><img src="../../docs/images/cluster-nightdrive.png" width="900" alt="Night Drive theme"></p>
 
+### Neon Highway
+
+Driving down a neon highway into a striped synthwave sun, between rows of low-poly neon palms, over a glowing grid, with low-poly mountains, a ringed planet and stars. The lane lines, the grid and the palms come at you with your speed, faster than real and more so the faster you go; parked, the road stands still.
+
+- **Speed:** from about 30 km/h the lane lines stretch into streaks, the grid blurs and light pulses shoot down the grid and along the road's edges. From about 50 km/h streaks of light fly out of the horizon, the grid turns purple, the sun's glow swells and the edges of the view darken. All of it is at full strength from about 150 km/h and calms down again as you slow.
+- **Revs:** the road's two edges light up from the bottom of the cluster towards the sun: cyan, then magenta, then red from your redline. At the shift point both flash.
+- **Readouts** as Night Drive's: the speed left of the sun, the gear right of it, in chrome figures, the clock and outside temperature above them.
+
+<p align="center"><img src="../../docs/images/cluster-highway.png" width="900" alt="Neon Highway theme"></p>
+
 ### Warp
 
 Stars stream out of the middle: dots when you go slowly, long streaks when you go fast. The revs are a ring round the speed in the middle, and the whole sky flashes at the shift point. The clock and outside temperature are on the left, the gear and drive mode on the right.
@@ -162,7 +172,7 @@ More themes are on the way.
 
 - **Off (BMW's own cluster):** pick it as the theme and the app draws nothing, so BMW's cluster comes back. **Show BMW's own cluster in every mode** (Theme tab) does that for every drive mode in one tap, with Undo for 10 seconds.
 - **A theme for each drive mode** (on by default): the cluster follows the drive mode buttons. On the Theme tab, pick the mode (1. Drive mode), then tap its theme (2.). Out of the box, Sport shows Track, and Comfort and Eco Pro show BMW's own cluster. **One theme for every mode** turns this off (it is **Change with SPORT / COMFORT / ECO PRO** in the kit's own All settings list). Until the car reports a mode, the cluster shows the **Default** theme (the fourth choice on the Theme tab); the page starts on whichever is in use now, so a tap on a picture changes what the cluster shows.
-- **Plug-in hybrids:** the car sends its mode as PHEV_SPORT_STANDARD and so on; recognised since 0.22.2.
+- **Plug-in hybrids:** the car sends its mode as PHEV_SPORT_STANDARD and so on; recognised since 0.22.3.
 - **M cars:** the Efficient, Sport and Sport+ modes of M cars are not recognised yet, so the theme doesn't change with them. **Settings, Details for bug reports** shows the value your car sends; please post it in an issue so it can be added.
 - **With HUD Widgets:** on cluster-render 0.5.1 and newer, a cluster theme and a HUD layout show at the same time. On older cluster-render they share one screen slot and take turns: pick a theme while the HUD is on and the page asks whether to turn HUD Widgets off, and it asks the same the other way round.
 

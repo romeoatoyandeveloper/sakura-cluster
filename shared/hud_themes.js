@@ -286,6 +286,9 @@ function sceneTheme(name, text, c) {
 }
 THEMES.nightdrive = sceneTheme('Night Drive', { fg: [255, 244, 252, 255], dim: [255, 150, 220, 255], sec: [190, 240, 255, 255], pink: [255, 70, 175, 255] },
     [[18, 6, 48], [255, 48, 160], [255, 216, 88], [40, 232, 255]]);
+// Neon Highway (layout highway.json): Night Drive's colours (shaders.js scene_highway)
+THEMES.highway = sceneTheme('Neon Highway', { fg: [255, 244, 252, 255], dim: [255, 150, 220, 255], sec: [190, 240, 255, 255], pink: [255, 70, 175, 255] },
+    [[18, 6, 48], [255, 48, 160], [255, 216, 88], [40, 232, 255]]);
 THEMES.warp = sceneTheme('Warp', { fg: [235, 245, 255, 255], dim: [130, 190, 255, 255], sec: [200, 225, 255, 255] },
     [[2, 3, 12], [120, 160, 255], [60, 220, 255], [255, 70, 100]]);
 THEMES.paper = sceneTheme('Paper', { fg: [26, 26, 28, 255], dim: [118, 112, 104, 255], sec: [64, 62, 60, 255] },

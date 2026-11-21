@@ -54,6 +54,17 @@ L.text('out', 1590, 186, 180, '{{ambientN}}{{u:temp}}', 'm_label', 'sec', align=
 L.text('gear', 1360, 318, 410, '{{gear}}', 'm_gear', 'fg', align='left', color2='pink')
 L.write()
 
+# Neon Highway: as Night Drive (the speed left and the gear right of the sun, Orbitron, chrome figures)
+L = Layout('highway', 'Neon Highway', 'highway')
+L.text('speed_lab', 150, 186, 200, 'SPEED', 'm_label', 'dim')
+L.text('speed_u', 236, 186, 120, '{{u:speedLc}}', 'm_unit', 'dim')
+L.text('clock', 380, 190, 180, '{{time}}', 'm_mid', 'sec', align='right')
+L.text('speed', 150, 318, 410, '{{speed}}', 'm_gear', 'fg', align='right', color2='pink')
+L.text('gear_lab', 1360, 186, 200, 'GEAR', 'm_label', 'dim')
+L.text('out', 1590, 186, 180, '{{ambientN}}{{u:temp}}', 'm_label', 'sec', align='right')
+L.text('gear', 1360, 318, 410, '{{gear}}', 'm_gear', 'fg', align='left', color2='pink')
+L.write()
+
 # Warp: the speed inside the rev ring, the clock and outside on the left, the gear on the right
 L = Layout('warp', 'Warp', 'warp')
 L.text('speed', 760, 372, 400, '{{speed}}', 's_hero', 'fg', align='center')

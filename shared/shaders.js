@@ -2094,6 +2094,139 @@ void main() {
 }
 `;
 
+// Neon Highway: driving down a neon highway into a striped synthwave sun, rows of low-poly neon palms on both sides,
+// a grid floor, low-poly mountains, a ringed planet and a big dim one, stars. The lane dashes, the grid and the palms
+// come at you with the speed (u_a.x: how far you've driven, in world units, the road's half width being 1). The revs
+// light the road's two edges from the bottom of the cluster towards the sun (cyan, magenta, red from the redline),
+// flashing at the shift point; the sun's glow pulses with them. u_a: x the distance, y seconds.
+const SCENE_HIGHWAY = SCENE_HEAD + `uniform vec4 u_a;
+const float HZ = 410.0;
+const float G = 1.355;
+const float D = 900.0;
+float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)); }
+// a leaf from a to b, a long kite at most w wide each side, widest 0.3 of the way: x the distance from its rib, y from
+// its outline (< 0 inside)
+vec2 leaf(vec2 p, vec2 a, vec2 b, float w) {
+    vec2 pa = p - a, ba = b - a;
+    float t = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0), d = length(pa - ba * t);
+    return vec2(d, d - w * min(t / 0.3, (1.0 - t) / 0.7));
+}
+// a palm in its own units (its foot at 0, 1 tall, x outwards from the road), h its hash, e an edge's width: 0 outside,
+// 1 its dark body, 2 a neon edge (outlines, the leaves' ribs, the trunk's rings)
+float palm(vec2 q, float h, float e) {
+    float lean = 0.08 + 0.14 * h;
+    vec2 mid = vec2(lean * 0.25, -0.5), top = vec2(lean, -1.0), d = q - top;
+    float dd = min(seg(q, vec2(0.0), mid), seg(q, mid, top)) - mix(0.055, 0.03, clamp(-q.y, 0.0, 1.0));
+    bool rib = dd < 0.0 && fract(q.y * 13.0) < 0.12;
+    // seven drooping fronds over the top, each a long kite: the two nearest this point's angle
+    float a = atan(d.y, d.x);
+    if (a > 1.5708) a -= 6.2832;
+    float fk = clamp((a + 3.1416) / 0.4488 - 0.5, 0.0, 6.0);
+    for (int j = 0; j < 2; j++) {
+        float th = -3.1416 + (min(floor(fk) + float(j), 6.0) + 0.5) * 0.4488 + (h - 0.5) * 0.3;
+        vec2 dir = vec2(cos(th), sin(th)), l = leaf(q, top, top + dir * 0.6 + vec2(0.0, 0.12 + 0.2 * dir.x * dir.x), 0.09);
+        if (l.y < dd) { dd = l.y; rib = l.x < e * 0.5; }
+    }
+    return dd < -e ? (rib ? 2.0 : 1.0) : dd < 0.0 ? 2.0 : 0.0;
+}
+void main() {
+    vec2 p = floor(v_uv * u_size) + 0.5;
+    if (kept(p)) { gl_FragColor = vec4(0.0); return; }
+    // k2 the speed effects (from 30 km/h, full at 120), k3 the strongest ones (from 50 km/h, full at 150)
+    float T = u_a.x, sx = p.x - 960.0, ax = abs(sx), k2 = smoothstep(0.15, 0.6, u_drive.x), k3 = smoothstep(0.25, 0.75, u_drive.x);
+    vec3 hzc = vec3(0.98, 0.30, 0.52), c;
+    if (p.y < HZ) {
+        // the sky, faint scan lines, stars
+        float t = p.y / HZ;
+        c = mix(vec3(0.05, 0.02, 0.15), vec3(0.34, 0.05, 0.38), smoothstep(0.0, 0.62, t));
+        c = mix(c, hzc, smoothstep(0.55, 1.0, t)) * (0.93 + 0.07 * step(2.0, mod(p.y, 6.0)));
+        vec2 cell = floor(p / 36.0);
+        float sh = hash(cell);
+        if (sh > 0.86 && p.y < 260.0) c += vec3(smoothstep(1.6, 0.0, length(p - cell * 36.0 - 6.0 - 24.0 * vec2(hash(cell + 3.1), hash(cell + 7.7))))) * (0.45 + 0.55 * fract(sh * 13.0 + u_a.y * 0.25));
+        // a big dim planet top left; a ringed one top right (the ring behind it, then in front)
+        float bp = length(p - vec2(330.0, 64.0));
+        c = mix(c, mix(vec3(0.55, 0.12, 0.30), vec3(0.16, 0.03, 0.16), smoothstep(-90.0, 110.0, sx + 630.0 + p.y - 64.0)), 0.8 * smoothstep(106.0, 104.0, bp));
+        vec2 rp = p - vec2(1585.0, 118.0), rr = vec2(rp.x * 0.978 + rp.y * 0.208, rp.y * 0.978 - rp.x * 0.208);
+        float re = length(rr / vec2(74.0, 13.0)), ring = step(0.8, re) * step(re, 1.0);
+        vec3 rc = mix(vec3(1.0, 0.80, 0.30), vec3(1.0, 0.42, 0.22), (re - 0.8) * 5.0);
+        if (ring > 0.0 && rr.y < 0.0) c = rc;
+        if (length(rp) < 30.0) c = mix(vec3(1.0, 0.50, 0.32), vec3(0.42, 0.07, 0.28), smoothstep(-25.0, 30.0, rp.x + rp.y));
+        if (ring > 0.0 && rr.y >= 0.0) c = rc;
+        // the sun: yellow to orange to pink, slices cut from its lower part, its glow pulsing with the revs
+        vec2 sc = vec2(960.0, HZ - 18.0);
+        float R = 205.0, d = length(p - sc);
+        c += vec3(1.0, 0.30, 0.55) * 0.5 * (0.6 + 0.9 * u_drive.y + 0.6 * k3) * exp(-max(d - R, 0.0) / (80.0 + 60.0 * k3)) * step(R, d);
+        if (d < R) {
+            float st = (p.y - sc.y + R) / (2.0 * R), b = p.y - sc.y + 0.12 * R;
+            vec3 sun = mix(mix(vec3(1.0, 0.95, 0.32), vec3(1.0, 0.55, 0.24), smoothstep(0.1, 0.55, st)), vec3(1.0, 0.24, 0.52), smoothstep(0.5, 0.95, st));
+            if (!(b > 0.0 && mod(b, 24.0) < 2.0 + 11.0 * b / (1.12 * R))) c = sun;
+        }
+        // low-poly mountains at the sides: faces towards the sun lit, a cyan edge
+        float w1 = fract((p.x + 37.0) / 300.0), w2 = fract((p.x + 140.0) / 190.0);
+        float h1 = (1.0 - abs(w1 * 2.0 - 1.0)) * (70.0 + 60.0 * hash(vec2(floor((p.x + 37.0) / 300.0), 2.0)));
+        float h2 = (1.0 - abs(w2 * 2.0 - 1.0)) * (40.0 + 40.0 * hash(vec2(floor((p.x + 140.0) / 190.0), 5.0)));
+        float k = smoothstep(150.0, 430.0, ax), hg = max(h1, h2) * k, top = HZ - hg;
+        if (p.y > top) {
+            bool lit = ((h1 >= h2 ? w1 : w2) > 0.5) == (sx < 0.0);
+            c = mix(vec3(0.30, 0.07, 0.40), vec3(0.10, 0.02, 0.18), (p.y - top) / max(hg, 1.0)) * (lit ? 1.4 : 0.75);
+        }
+        if (abs(p.y - top) < 1.5 && hg > 3.0) c = vec3(0.35, 0.95, 1.0);
+    } else {
+        // the ground: Z ahead, X to the side (the road |X| < 1); things fixed in the world are fixed in Z + T
+        float y = p.y - HZ + 0.5, Z = D / y, X = sx / (G * y), aX = abs(X), dz = D / (y * y);
+        if (aX < 1.0) {
+            // the road, the sun on its wet asphalt, two dashed lane lines
+            c = mix(vec3(0.12, 0.04, 0.18), vec3(0.03, 0.02, 0.08), smoothstep(0.0, 220.0, y));
+            c += hzc * 0.35 * exp(-y / 60.0) * exp(-aX * 2.5);
+            float fd = fract((Z + T) / 2.4), dl = 0.3 + 0.55 * k2;
+            float dash = mix(step(fd, dl) * (1.0 - 0.75 * k2 * fd / dl), dl * 0.6, smoothstep(0.1, 0.4, dz / 2.4)), lw = max(1.2, 0.035 * G * y);
+            c = mix(c, vec3(0.90, 0.88, 1.0), dash * smoothstep(lw * 0.5 + 0.8, lw * 0.5 - 0.2, abs(aX - 0.3333) * G * y) * smoothstep(0.0, 20.0, y));
+        } else {
+            // the grid floor
+            c = mix(vec3(0.07, 0.02, 0.16), vec3(0.01, 0.0, 0.05), smoothstep(0.0, 300.0, y));
+            float f = fract((Z + T) / 1.2), dr = dz / 1.2 * 1.8, g = fract(aX * 2.0), dw = 2.8 * (y + ax) / (G * y * y);   // (a step down a row moves along the lines too, off to the side)
+            float v1 = (1.0 - smoothstep(dw * 0.5, dw * 1.5, min(g, 1.0 - g))) * min(1.0, 0.25 / dw) * smoothstep(0.0, 30.0, y);
+            float line = max((1.0 - smoothstep(dr * 0.5, dr * 1.5 + 0.3 * k2, min(f, 1.0 - f))) * min(1.0, 0.12 / dr) * (1.0 - 0.5 * k2) * smoothstep(0.0, 30.0, y), v1);
+            vec3 gc = mix(vec3(0.20, 0.55, 1.0), vec3(0.75, 0.30, 1.0), k3);
+            c = mix(c, gc, line * 0.85) + gc * 0.12 * line;
+            float hp = hash(vec2(floor(aX * 2.0 + 0.5), step(0.0, sx))), pz = fract((Z + T * 1.8) / 9.0 + hp);
+            c += vec3(1.0, 0.55, 0.95) * v1 * k2 * step(0.3, hp) * smoothstep(0.1 + 0.3 * k2, 0.0, pz) * 1.8;
+            c += hzc * 0.3 * (1.0 + k2) * exp(-y / 35.0);
+        }
+        // the road's edges: the revs, lit from the bottom of the cluster towards the sun
+        float s = (720.0 - p.y) / (720.0 - HZ), ex = abs(aX - 1.0) * G * y, ew = max(2.0, 0.05 * G * y);
+        vec3 on = s >= u_drive.w ? vec3(1.0, 0.22, 0.25) : mix(vec3(0.45, 1.0, 1.0), vec3(1.0, 0.40, 0.90), s);
+        if (u_drive.z > 0.5) on = vec3(1.0, 0.85, 0.90);
+        vec3 ec = s < u_drive.y || u_drive.z > 0.5 ? on : vec3(0.32, 0.20, 0.62);
+        ec *= 1.0 + 1.2 * k2 * step(fract((Z + T * 1.5) / 6.0), 0.25);
+        c = mix(c, ec, smoothstep(ew * 0.5 + 1.0, ew * 0.5, ex)) + ec * (0.5 + 0.4 * k2) * exp(-ex / (5.0 + 0.05 * y));
+    }
+    // the palms, a row each side 3.4 out, every 7.5 (the right row half a spacing on), drawn far to near
+    float side = step(0.0, sx), Tp = T - side * 3.75, n0 = floor(Tp / 7.5);
+    vec2 m = vec2(ax, p.y);
+    for (int i = 0; i < 4; i++) {
+        float n = n0 + 4.0 - float(i), Zp = n * 7.5 - Tp, yb = D / Zp, s = G * yb * 2.6;
+        vec2 q = (m - vec2(3.4 * G * yb, HZ + yb)) / s;
+        if (q.x > -0.75 && q.x < 0.95 && q.y > -1.65 && q.y < 0.05) {
+            float v = palm(q, hash(vec2(mod(n, 64.0), side)), 1.8 / s), fog = smoothstep(19.0, 29.0, Zp);
+            if (v > 1.5) c = mix(vec3(0.30, 0.95, 1.0), c, fog * 0.8);
+            else if (v > 0.5) c = mix(vec3(0.03, 0.03, 0.12), c, fog);
+        }
+    }
+    // at speed: streaks of light flying out of the vanishing point, the edges of the view darker
+    if (k3 > 0.0) {
+        vec2 v = p - vec2(960.0, HZ);
+        float r = length(v), an = atan(v.y, v.x) / 6.2832 * 260.0, h = hash(vec2(floor(an), 9.0));
+        float sl = fract(log(r) * 1.6 - u_a.z * (1.0 + floor(h * 3.0)) + h * 7.0), ln = 0.1 + 0.12 * k3;
+        c += mix(vec3(0.75, 0.92, 1.0), vec3(1.0, 0.6, 0.95), step(0.85, h)) * 1.1 * k3 * step(0.4, h) * step(sl, ln) * (1.0 - sl / ln)
+            * smoothstep(0.3, 0.12, abs(fract(an) - 0.5)) * smoothstep(60.0, 360.0, r);
+        float vg = smoothstep(0.5, 1.15, length(v / vec2(960.0, 430.0)));
+        c = c * (1.0 - 0.6 * k3 * vg) + vec3(0.30, 0.0, 0.25) * 0.25 * k3 * vg;
+    }
+    gl_FragColor = vec4(c * u_dim, 1.0);
+}
+`;
+
 // Warp: stars streaming out of the middle, dots when slow, long streaks when fast; the revs a ring round the middle
 // (from 7:30 round to 4:30), the whole sky flashing at the shift point. u_a: x the distance travelled through the stars,
 // y seconds. c1 space, c2 the stars' blue, c3 the ring's cyan and the glow ahead, c4 the red zone.
@@ -2890,4 +3023,4 @@ void main() {
 
 module.exports = { shiftbar: SHIFTBAR, arc: ARC, revbar: REVBAR, lights: LIGHTS, fill: FILL, box: BOX, grid: GRID, segbar: SEGBAR, mdash: MDASH, mtach: MTACH, sdash: SDASH, boxes: BOXES, atext: ATEXT, meter: METER, gmeter: GMETER, revarc: REVARC, tiles: TILES, ribbon: RIBBON, deco: DECO, mview: MVIEW, vdash: VDASH, sakura: SAKURA, photo: PHOTO,
     scene_synth: SCENE_SYNTH, scene_warp: SCENE_WARP, scene_paper: SCENE_PAPER, scene_trails: SCENE_TRAILS,
-    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL, scene_vfd: SCENE_VFD, scene_canal: SCENE_CANAL, scene_hanami: SCENE_HANAMI };
+    scene_glass: SCENE_GLASS, scene_orbital: SCENE_ORBITAL, scene_vfd: SCENE_VFD, scene_canal: SCENE_CANAL, scene_hanami: SCENE_HANAMI, scene_highway: SCENE_HIGHWAY };
