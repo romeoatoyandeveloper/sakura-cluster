@@ -89,7 +89,7 @@
       "glow": "lit",
       "lit": {
         "when": "mode:SPORT",
-        "color": "fg"
+        "color": "orange"
       }
     },
     {
@@ -106,7 +106,7 @@
       "glow": "lit",
       "lit": {
         "when": "mode:ECO PRO",
-        "color": "fg"
+        "color": "green"
       }
     },
     {
@@ -190,7 +190,7 @@
       "h": 19,
       "text": "OIL TEMP",
       "font": "vf_17",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "oil",
@@ -202,7 +202,7 @@
       "h": 76,
       "text": "{{oil}}",
       "font": "vf_val",
-      "color": "fg",
+      "color": "amber",
       "align": "right",
       "glow": true,
       "warnFlash": false,
@@ -223,7 +223,7 @@
       "h": 19,
       "text": "{{u:temp}}",
       "font": "vf_17",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "oil_hot",
@@ -235,7 +235,7 @@
       "h": 19,
       "text": "HOT",
       "font": "vf_17",
-      "color": "ghost",
+      "color": "aghost",
       "glow": "lit",
       "rate": 100,
       "lit": {
@@ -254,7 +254,7 @@
       "h": 19,
       "text": "COOLANT",
       "font": "vf_17",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "coolant",
@@ -266,7 +266,7 @@
       "h": 76,
       "text": "{{coolant}}",
       "font": "vf_val",
-      "color": "fg",
+      "color": "amber",
       "align": "right",
       "glow": true,
       "warnFlash": false,
@@ -287,7 +287,7 @@
       "h": 19,
       "text": "{{u:temp}}",
       "font": "vf_17",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "coolant_hot",
@@ -299,7 +299,7 @@
       "h": 19,
       "text": "HOT",
       "font": "vf_17",
-      "color": "ghost",
+      "color": "aghost",
       "glow": "lit",
       "rate": 100,
       "lit": {
@@ -318,7 +318,7 @@
       "h": 19,
       "text": "FUEL",
       "font": "vf_17",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "fuel",
@@ -330,7 +330,7 @@
       "h": 76,
       "text": "{{fuelPct}}",
       "font": "vf_val",
-      "color": "fg",
+      "color": "amber",
       "align": "right",
       "glow": true
     },
@@ -344,7 +344,7 @@
       "h": 19,
       "text": "%",
       "font": "vf_17",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "fuel_e",
@@ -356,7 +356,7 @@
       "h": 19,
       "text": "E",
       "font": "vf_15",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "fuel_h",
@@ -368,7 +368,7 @@
       "h": 19,
       "text": "½",
       "font": "vf_15",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "fuel_f",
@@ -380,7 +380,7 @@
       "h": 19,
       "text": "F",
       "font": "vf_15",
-      "color": "dim"
+      "color": "adim"
     },
     {
       "id": "boost_l",
@@ -392,7 +392,7 @@
       "h": 19,
       "text": "BOOST",
       "font": "vf_17",
-      "color": "dim"
+      "color": "gdim"
     },
     {
       "id": "boost",
@@ -404,7 +404,7 @@
       "h": 76,
       "text": "{{boost}}",
       "font": "vf_val",
-      "color": "fg",
+      "color": "green",
       "align": "right",
       "glow": true
     },
@@ -418,7 +418,7 @@
       "h": 19,
       "text": "{{u:boost}}",
       "font": "vf_17",
-      "color": "dim"
+      "color": "gdim"
     },
     {
       "id": "g_l",
@@ -430,7 +430,7 @@
       "h": 19,
       "text": "G LOAD",
       "font": "vf_17",
-      "color": "dim"
+      "color": "gdim"
     },
     {
       "id": "g",
@@ -442,7 +442,7 @@
       "h": 76,
       "text": "{{gNow}}",
       "font": "vf_val",
-      "color": "fg",
+      "color": "green",
       "align": "right",
       "glow": true
     },
@@ -456,7 +456,7 @@
       "h": 19,
       "text": "G",
       "font": "vf_17",
-      "color": "dim"
+      "color": "gdim"
     },
     {
       "id": "clock",
@@ -468,7 +468,7 @@
       "h": 48,
       "text": "{{time}}",
       "font": "vf_row",
-      "color": "fg",
+      "color": "amber",
       "align": "right",
       "glow": true
     },
@@ -482,11 +482,11 @@
       "h": 19,
       "text": "AM",
       "font": "vf_15",
-      "color": "ghost",
+      "color": "aghost",
       "glow": "lit",
       "lit": {
         "when": "ampm:AM",
-        "color": "fg"
+        "color": "amber"
       }
     },
     {
@@ -499,11 +499,11 @@
       "h": 19,
       "text": "PM",
       "font": "vf_15",
-      "color": "ghost",
+      "color": "aghost",
       "glow": "lit",
       "lit": {
         "when": "ampm:PM",
-        "color": "fg"
+        "color": "amber"
       }
     },
     {
@@ -554,7 +554,7 @@
       "h": 15,
       "text": "EXT",
       "font": "vf_14",
-      "color": "dim"
+      "color": "gdim"
     },
     {
       "id": "out",
@@ -566,7 +566,7 @@
       "h": 48,
       "text": "{{ambientN}}",
       "font": "vf_row",
-      "color": "fg",
+      "color": "green",
       "align": "right",
       "glow": true
     },
@@ -580,7 +580,7 @@
       "h": 16,
       "text": "{{u:temp}}",
       "font": "vf_16",
-      "color": "dim"
+      "color": "gdim"
     }
   ]
 }

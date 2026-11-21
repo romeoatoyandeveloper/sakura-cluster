@@ -346,10 +346,11 @@ T(L, 'shift_tag', 913, tb, 90, 'SHIFT', 'ob_alert', 'orange', showWhen='shift', 
 T(L, 'warn_tag', 800, tb, 360, 'COOLANT ANOMALY · {{coolant}}°{{u:deg}}', 'ob_alert', 'amber', showWhen='warn:coolant', warnFlash=False)
 L.write()
 
-# VFD (T4 · VFD, the "Terminal variants" page: an 80s vacuum-fluorescent dash), its cyan filter. Share Tech Mono labels at
-# the design's sizes; every number in seven segments (vf_gear / vf_speed / vf_val / vf_row, drawn from the design's own
-# segment geometry) over the ghost 8s the shader draws in the same slots. A number's box ends 2 glow radii past its last
-# slot (bake_seg's DELTA): slot x + slots x pitch + DELTA, right-aligned, so each digit lands in its slot.
+# VFD (T4 · VFD, the "Terminal variants" page: an 80s vacuum-fluorescent dash) in three phosphors at once: the middle
+# cyan, the left panel and the clock amber, the right panel and the outside green (the design's three filters). Share
+# Tech Mono labels at the design's sizes; every number in seven segments (vf_gear / vf_speed / vf_val / vf_row, drawn from
+# the design's own segment geometry) over the ghost 8s the shader draws in the same slots. A number's box ends 2 glow
+# radii past its last slot (bake_seg's DELTA): slot x + slots x pitch + DELTA, right-aligned, so each digit lands in its slot.
 L = Layout('vfd', 'VFD', 'vfd', nightDim=0.8)
 STM = 'ShareTechMono-Regular.ttf'
 
@@ -374,8 +375,9 @@ tick = font('vf_tick')['glyphs']['0']['advance']
 L.w.append({'id': 'rpm_scale', 'type': 'scale', 'z': 5, 'x': int(round(516 - tick / 2)), 'w': int(round(880 + tick)),
             'y': int(round(css_base(210, 19, STM, 15) - font('vf_tick')['baseline'])), 'h': font('vf_tick')['cellHeight'],
             'font': 'vf_tick', 'color': 'dim', 'redFrom': True})
-for id, x, mode in (('m_comfort', 760, 'COMFORT'), ('m_sport', 900, 'SPORT'), ('m_eco', 1010, 'ECO PRO')):
-    lab(id, x, 244, 24, 20, mode, 'ghost', w=112, glow='lit', lit={'when': 'mode:' + mode, 'color': 'fg'})
+# the drive modes light in their own colours: Comfort cyan, Sport orange, Eco Pro green
+for id, x, mode, lc in (('m_comfort', 760, 'COMFORT', 'fg'), ('m_sport', 900, 'SPORT', 'orange'), ('m_eco', 1010, 'ECO PRO', 'green')):
+    lab(id, x, 244, 24, 20, mode, 'ghost', w=112, glow='lit', lit={'when': 'mode:' + mode, 'color': lc})
 lab('m_shift', 1130, 244, 24, 20, 'SHIFT', 'ghost', w=90, glow='lit', rate=25, lit={'when': 'shift', 'color': 'orange', 'blink': 125})
 lab('gear_l', 730, 282, 19, 15, 'GEAR')
 seg('gear', 'vf_gear', 890, 284, 1, 170, 6, '{{gearnum}}', room=0)
@@ -384,31 +386,31 @@ seg('speed', 'vf_speed', 843, 532, 3, 82, 4, '{{speed}}', room=0)
 lab('speed_u', 1104, 612, 22, 18, '{{u:speed}}', w=90)
 warn = lambda r: {'warnFlash': False, 'rate': 100, 'lit': {'when': 'warn:' + r, 'color': 'red', 'blink': 500}}
 for key, top, label, val in (('oil', 266, 'OIL TEMP', '{{oil}}'), ('coolant', 370, 'COOLANT', '{{coolant}}'), ('fuel', 474, 'FUEL', '{{fuelPct}}')):
-    lab(key + '_l', 204, top, 21, 17, label)
+    lab(key + '_l', 204, top, 21, 17, label, 'adim')
     if key == 'fuel':
-        seg('fuel', 'vf_val', 204, top + 26, 3, 36, 3, val)
-        lab('fuel_u', 312, top + 52, 21, 17, '%', w=24)
+        seg('fuel', 'vf_val', 204, top + 26, 3, 36, 3, val, color='amber')
+        lab('fuel_u', 312, top + 52, 21, 17, '%', 'adim', w=24)
     else:
-        seg(key, 'vf_val', 204, top + 26, 3, 36, 3, val, **warn(key))
-        lab(key + '_u', 330, top + 52, 21, 17, '{{u:temp}}', w=40)
-        lab(key + '_hot', 574, top, 21, 17, 'HOT', 'ghost', w=56, glow='lit', rate=100, lit={'when': 'warn:' + key, 'color': 'red', 'blink': 500})
-lab('fuel_e', 204, 604, 19, 15, 'E', w=20)
-lab('fuel_h', 404, 604, 19, 15, '½', w=20)
-lab('fuel_f', 612, 604, 19, 15, 'F', w=20)
-lab('boost_l', 1294, 266, 21, 17, 'BOOST')
-seg('boost', 'vf_val', 1294, 292, 3, 36, 3, '{{boost}}')
-lab('boost_u', 1440, 318, 21, 17, '{{u:boost}}', w=60)
-lab('g_l', 1294, 392, 21, 17, 'G LOAD')
-seg('g', 'vf_val', 1294, 420, 2, 36, 3, '{{gNow}}')
-lab('g_u', 1376, 454, 21, 17, 'G', w=24)
-seg('clock', 'vf_row', 206, 664, 2, 28, 2, '{{time}}', room=0)
+        seg(key, 'vf_val', 204, top + 26, 3, 36, 3, val, color='amber', **warn(key))
+        lab(key + '_u', 330, top + 52, 21, 17, '{{u:temp}}', 'adim', w=40)
+        lab(key + '_hot', 574, top, 21, 17, 'HOT', 'aghost', w=56, glow='lit', rate=100, lit={'when': 'warn:' + key, 'color': 'red', 'blink': 500})
+lab('fuel_e', 204, 604, 19, 15, 'E', 'adim', w=20)
+lab('fuel_h', 404, 604, 19, 15, '½', 'adim', w=20)
+lab('fuel_f', 612, 604, 19, 15, 'F', 'adim', w=20)
+lab('boost_l', 1294, 266, 21, 17, 'BOOST', 'gdim')
+seg('boost', 'vf_val', 1294, 292, 3, 36, 3, '{{boost}}', color='green')
+lab('boost_u', 1440, 318, 21, 17, '{{u:boost}}', 'gdim', w=60)
+lab('g_l', 1294, 392, 21, 17, 'G LOAD', 'gdim')
+seg('g', 'vf_val', 1294, 420, 2, 36, 3, '{{gNow}}', color='green')
+lab('g_u', 1376, 454, 21, 17, 'G', 'gdim', w=24)
+seg('clock', 'vf_row', 206, 664, 2, 28, 2, '{{time}}', room=0, color='amber')
 L.w[-1].update({'x': 190, 'w': 280 + 2 * 28 + 4 - 190})       # hours in two slots from 206, the colon, minutes from 280
-lab('am', 350, 664, 19, 15, 'AM', 'ghost', w=40, glow='lit', lit={'when': 'ampm:AM', 'color': 'fg'})
-lab('pm', 350, 682, 19, 15, 'PM', 'ghost', w=40, glow='lit', lit={'when': 'ampm:PM', 'color': 'fg'})
+lab('am', 350, 664, 19, 15, 'AM', 'aghost', w=40, glow='lit', lit={'when': 'ampm:AM', 'color': 'amber'})
+lab('pm', 350, 682, 19, 15, 'PM', 'aghost', w=40, glow='lit', lit={'when': 'ampm:PM', 'color': 'amber'})
 lab('range_l', 810, 680, 18, 14, 'RANGE', w=60)
 seg('range', 'vf_row', 898, 664, 3, 28, 2, '{{range}}')
 lab('range_u', 992, 680, 20, 16, '{{u:dist}}', w=40)
-lab('out_l', 1500, 680, 18, 14, 'EXT', w=40)
-seg('out', 'vf_row', 1556, 664, 2, 28, 2, '{{ambientN}}', room=0)
-lab('out_u', 1620, 680, 20, 16, '{{u:temp}}', w=40)
+lab('out_l', 1500, 680, 18, 14, 'EXT', 'gdim', w=40)
+seg('out', 'vf_row', 1556, 664, 2, 28, 2, '{{ambientN}}', room=0, color='green')
+lab('out_u', 1620, 680, 20, 16, '{{u:temp}}', 'gdim', w=40)
 L.write()

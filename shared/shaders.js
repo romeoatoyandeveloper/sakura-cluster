@@ -3273,18 +3273,24 @@ void main() {
 }
 `;
 
-// VFD (T4 · VFD on the canvas, an 80s vacuum-fluorescent dash): near-black glass with three recessed panels and a faint
-// sheen, the revs as a 40-bar skyline rising to the right (red at the shift point, flashing orange at 4 Hz), segmented
-// bars for oil and coolant (red over their limits), fuel and boost, a 7 x 7 dot grid with the G dot lit (0.2 g a step),
-// and every digit's unlit segments, the ghost 8s; the lit segments are text over them (the vf_* seven-segment fonts,
-// tools/bake_fonts.py bake_seg, the same geometry). c1 the lit phosphor, c2 unlit segments, c3 the shift red, c4 the
-// flash orange.
+// VFD (T4 · VFD on the canvas, an 80s vacuum-fluorescent dash), in three phosphors at once as the multi-colour VFDs
+// of the time: the middle cyan, the left panel amber, the right one green. Near-black glass with three recessed panels
+// (rims and fills tinted their phosphor) and a faint sheen; the revs as a 40-bar skyline in colour zones (cyan, green,
+// amber, orange from half way, red from the redline; the unlit bars a faint tint of theirs), all of it red flashing
+// orange at the shift point; segment bars for oil and coolant (amber, orange, red at the hot end; all red over their
+// limits), fuel (red at the bottom) and boost (green, amber, red); a 7 x 7 dot grid with the G dot lit (0.2 g a step,
+// green, amber from 0.45 g, red from 0.85); and every digit's unlit segments, the ghost 8s, in its panel's tint; the lit
+// segments are text over them (the vf_* seven-segment fonts, tools/bake_fonts.py bake_seg, the same geometry). An unlit
+// segment or bar is its phosphor at 16 %.
 const SCENE_VFD = SCENE_HEAD + `uniform vec4 u_a;
 uniform vec4 u_b;
 uniform vec4 u_g;
 const vec3 BG = vec3(0.008, 0.031, 0.027);
-const vec3 PANEL = vec3(0.016, 0.055, 0.047);
-const vec3 RIM = vec3(0.047, 0.102, 0.094);
+const vec3 CY = vec3(0.435, 1.0, 0.914);
+const vec3 GR = vec3(0.549, 1.0, 0.420);
+const vec3 AM = vec3(1.0, 0.757, 0.290);
+const vec3 OR = vec3(1.0, 0.616, 0.231);
+const vec3 RD = vec3(1.0, 0.294, 0.169);
 float rbox(vec2 p, vec4 b, float r) { vec2 q = abs(p - b.xy - b.zw * 0.5) - b.zw * 0.5 + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 // distance to the segments of an 8 (and its decimal point when dp), digit-local px before the 6 degree slant;
 // g: segment thickness, digit width, height. Folded to a quarter: the top bar, the middle bar, the upper left bar.
@@ -3299,25 +3305,28 @@ float seg8(vec2 q, vec3 g, float dp) {
     vec2 b = abs(q - vec2(g.y + 0.625 * g.x, g.z - 0.55 * g.x)) - 0.45 * g.x;
     return dp > 0.5 ? min(d, max(b.x, b.y)) : d;
 }
-// a row of n bars (sz, every pitch px from the top-left at), the first lit of them in col with its glow, the rest unlit
-vec3 bars(vec2 p, vec3 c, vec2 at, float n, float pitch, vec2 sz, float lit, vec3 col) {
+// a row of n bars (sz, every pitch px from the top-left at), the first lit of them lit with their glow, the rest unlit;
+// bar i in colour ca, cb from bar bi, cr from bar ri
+vec3 bars(vec2 p, vec3 c, vec2 at, float n, float pitch, vec2 sz, float lit, vec3 ca, vec3 cb, float bi, vec3 cr, float ri) {
     vec2 q = p - at;
     if (q.y < -12.0 || q.y > sz.y + 12.0 || q.x < -12.0 || q.x > n * pitch + 12.0) return c;
     float i = clamp(floor((q.x + 0.5 * (pitch - sz.x)) / pitch), 0.0, n - 1.0);
     vec2 b = abs(q - vec2(i * pitch + 0.5 * sz.x, 0.5 * sz.y)) - 0.5 * sz;
     float d = length(max(b, 0.0)) + min(max(b.x, b.y), 0.0);
     bool on = i < lit - 0.5;
-    if (d < 0.0) return on ? col : u_c2;
+    vec3 col = i > ri - 0.5 ? cr : i > bi - 0.5 ? cb : ca;
+    if (d < 0.0) return on ? col : col * 0.16;
     return on ? c + col * 0.42 * exp(-d / 3.5) : c;
 }
 void main() {
     vec2 p = floor(v_uv * u_size) + 0.5;
     if (kept(p)) { gl_FragColor = vec4(0.0); return; }
     vec3 c = BG;
-    // the three panels: a 2 px rim, recessed (darker towards their edges)
+    // the three panels: a 2 px rim, recessed (darker towards their edges), tinted amber, cyan, green
     vec4 pr = p.x < 675.0 ? vec4(180.0, 248.0, 470.0, 384.0) : p.x < 1245.0 ? vec4(700.0, 230.0, 520.0, 420.0) : vec4(1270.0, 248.0, 470.0, 384.0);
+    vec3 tint = p.x < 675.0 ? AM : p.x < 1245.0 ? CY : GR;
     float pd = rbox(p, pr, 14.0);
-    if (pd < 0.0) c = pd > -2.0 ? RIM : PANEL * (1.0 - 0.4 * (1.0 - smoothstep(0.0, 26.0, -pd - 2.0)));
+    if (pd < 0.0) c = pd > -2.0 ? tint * 0.14 : (tint * 0.045 + 0.004) * (1.0 - 0.4 * (1.0 - smoothstep(0.0, 26.0, -pd - 2.0)));
     // the glass sheen: white at 3.5 % fading out by 35 % along a 115 degree line
     float sh = dot(p - vec2(960.0, 360.0), vec2(0.9063, 0.4226)) / 2044.5 + 0.5;
     c = mix(c, vec3(1.0), 0.035 * max(0.0, 1.0 - sh / 0.35));
@@ -3330,31 +3339,38 @@ void main() {
         vec2 b = abs(p - vec2(527.0 + i * 22.0, 206.0 - 0.5 * bh)) - vec2(7.0, 0.5 * bh);
         float d = length(max(b, 0.0)) + min(max(b.x, b.y), 0.0);
         bool on = i < floor(u_v.y * 40.0 + 0.5) - 0.5;
-        vec3 col = shift ? (u_v.z > 0.5 ? u_c4 : u_c3) : u_c1;
-        if (d < 0.0) c = on ? col : u_c2;
+        float f = (i + 0.5) / 40.0;
+        vec3 zc = f > (u_v.w > 0.3 ? u_v.w : 0.93) ? RD : f > 0.5 ? OR : f > 0.42 ? AM : f > 0.3 ? GR : CY;
+        vec3 col = shift ? (u_v.z > 0.5 ? OR : RD) : zc;
+        if (d < 0.0) c = on ? col : zc * 0.16;
         else if (on && !(shift && u_v.z < 0.5)) c += col * 0.45 * exp(-d / 4.0);
     }
     // oil and coolant (red over their limits), fuel, boost
-    c = bars(p, c, vec2(390.0, 310.0), 12.0, 20.0, vec2(14.0, 28.0), floor(u_b.x * 12.0 + 0.5), u_a.x > 0.5 ? u_c3 : u_c1);
-    c = bars(p, c, vec2(390.0, 414.0), 12.0, 20.0, vec2(14.0, 28.0), floor(u_b.y * 12.0 + 0.5), u_g.z > 0.5 ? u_c3 : u_c1);
-    c = bars(p, c, vec2(204.0, 580.0), 20.0, 21.0, vec2(15.0, 20.0), floor(u_b.z * 20.0 + 0.5), u_c1);
-    c = bars(p, c, vec2(1500.0, 310.0), 12.0, 18.0, vec2(12.0, 28.0), floor(u_b.w * 12.0 + 0.5), u_c1);
+    bool wo = u_a.x > 0.5, wc = u_g.z > 0.5;
+    c = bars(p, c, vec2(390.0, 310.0), 12.0, 20.0, vec2(14.0, 28.0), floor(u_b.x * 12.0 + 0.5), wo ? RD : AM, wo ? RD : OR, 8.0, RD, 10.0);
+    c = bars(p, c, vec2(390.0, 414.0), 12.0, 20.0, vec2(14.0, 28.0), floor(u_b.y * 12.0 + 0.5), wc ? RD : AM, wc ? RD : OR, 8.0, RD, 10.0);
+    c = bars(p, c, vec2(204.0, 580.0), 20.0, 21.0, vec2(15.0, 20.0), floor(u_b.z * 20.0 + 0.5), RD, AM, 3.0, AM, 20.0);
+    c = bars(p, c, vec2(1500.0, 310.0), 12.0, 18.0, vec2(12.0, 28.0), floor(u_b.w * 12.0 + 0.5), GR, AM, 8.0, RD, 10.0);
     // the G grid: 7 x 7 dots 26 px apart round 1607,503, the one at the G lit (0.2 g a step), cross hairs over them
     vec2 gq = p - vec2(1607.0, 503.0);
     if (abs(gq.x) < 100.0 && abs(gq.y) < 100.0) {
         vec2 cell = clamp(floor(gq / 26.0 + 0.5), -3.0, 3.0), gl = clamp(floor(u_g.xy / 0.2 + 0.5), -3.0, 3.0);
-        c = mix(c, cell == gl ? u_c1 : u_c2, clamp(9.5 - length(gq - cell * 26.0), 0.0, 1.0));
+        float gm = length(u_g.xy);
+        vec3 dc = gm < 0.45 ? GR : gm < 0.85 ? AM : RD;
+        c = mix(c, cell == gl ? dc : GR * 0.16, clamp(9.5 - length(gq - cell * 26.0), 0.0, 1.0));
         float ld = length(gq - gl * 26.0);
-        if (ld > 9.0) c += u_c1 * 0.5 * exp(-(ld - 9.0) / 4.0);
-        if ((gq.x > -1.0 && gq.x < 1.0 && abs(gq.y) < 92.0) || (gq.y > -1.0 && gq.y < 1.0 && abs(gq.x) < 92.0)) c = u_c2;
+        if (ld > 9.0) c += dc * 0.5 * exp(-(ld - 9.0) / 4.0);
+        if ((gq.x > -1.0 && gq.x < 1.0 && abs(gq.y) < 92.0) || (gq.y > -1.0 && gq.y < 1.0 && abs(gq.x) < 92.0)) c = GR * 0.16;
     }
-    // the ghost 8s: every digit slot's segments unlit (x, y of its first slot, slots, pitch; thickness, width, height)
+    // the ghost 8s: every digit slot's segments unlit (x, y of its first slot, slots, pitch; thickness, width, height;
+    // its phosphor: the clock amber, the range cyan, the outside green as the panels above them)
     vec4 R;
-    vec3 G;
+    vec3 G, ph = tint;
     float dp = 0.0;
     if (p.y > 650.0) {
         G = vec3(5.0, 20.0, 36.0);
         R = vec4(p.x < 270.0 ? 206.0 : p.x < 600.0 ? 280.0 : p.x < 1300.0 ? 898.0 : 1556.0, 664.0, p.x > 600.0 && p.x < 1300.0 ? 3.0 : 2.0, 28.0);
+        ph = p.x < 600.0 ? AM : p.x < 1300.0 ? CY : GR;
     } else if (p.x < 675.0) {
         G = vec3(8.0, 26.0, 60.0);
         R = vec4(204.0, p.y < 375.0 ? 292.0 : p.y < 479.0 ? 396.0 : 500.0, 3.0, 36.0);
@@ -3373,7 +3389,7 @@ void main() {
     if (q.y > -2.0 && q.y < G.z + 2.0 && q.x > -4.0 && q.x < R.z * R.w + 0.2 * G.z) {
         q.x -= 0.105104 * (G.z - q.y);
         float i = clamp(floor(q.x / R.w), 0.0, R.z - 1.0);
-        c = mix(c, u_c2, clamp(0.5 - seg8(q - vec2(i * R.w, 0.0), G, dp), 0.0, 1.0));
+        c = mix(c, ph * 0.16, clamp(0.5 - seg8(q - vec2(i * R.w, 0.0), G, dp), 0.0, 1.0));
     }
     gl_FragColor = vec4(c * u_dim, 1.0);
 }
