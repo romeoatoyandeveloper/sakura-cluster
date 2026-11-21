@@ -353,7 +353,7 @@ class Page {
         const offText = 'Show BMW\'s own cluster in every mode', ow = pillW(cv, offText, 15) + 64;
         pill(cv, X1 - ow, y + 2, ow, 40, offText, 'outline', () => this.allOff(), 'look:alloff', 15, 'power');
         // the gallery: 7 across, as big as the room lets them be
-        const looks = this.looks(), cols = 7, rows = Math.ceil(looks.length / cols), gy = y + 54, nameH = 24, rowGap = 10;
+        const looks = this.looks(), cols = Math.max(7, Math.ceil(looks.length / 3)), rows = Math.ceil(looks.length / cols), gy = y + 54, nameH = 24, rowGap = 10;
         const avail = bottom - gy - 6;
         const ih = Math.max(40, Math.min((CW - 6 * 14) / cols * 0.375, (avail - (rows - 1) * rowGap) / rows - nameH));
         const iw = ih / 0.375, gapX = (CW - cols * iw) / (cols - 1);

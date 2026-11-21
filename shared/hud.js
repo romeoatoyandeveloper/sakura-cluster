@@ -490,7 +490,8 @@ function driveModeOf(raw) {
         return null;
     }
     if (typeof v !== 'string') return null;
-    const u = v.trim().toUpperCase();
+    // plug-in hybrids put PHEV_ in front: PHEV_SPORT_STANDARD (a G01 X3 PHEV, Nov 21 2026), PHEV_COMFORT_..., PHEV_ECO_PRO_...
+    const u = v.trim().toUpperCase().replace(/^(PHEV|HEV|HYBRID)_/, '');
     if (u.indexOf('SPORT') === 0) return 'sport';
     if (u.indexOf('ECO') === 0 || u.indexOf('EFFICIEN') === 0) return 'eco';
     if (u.indexOf('COMFORT') === 0 || u.indexOf('ADAPTIVE') === 0) return 'comfort';
