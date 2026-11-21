@@ -118,7 +118,8 @@ class Page {
         this.cat = sensors.CATS[0];      // Gauges: the sensor group shown
         this.series = null;              // Model name: the series shown (null: the picked model's)
         this.confirm = null;             // { title, lines, yes, run, danger, no } while a question is open over the page
-        this.editMode = null;            // Theme: the drive mode whose theme the gallery sets (null: the car's)
+        this.editMode = null;            // Theme: the setting the gallery sets (hudLayout or a drive mode's; null: the one in use)
+        this.editNow = null;             // Theme: the one in use when editMode was last set to it
         this.toast = null;               // { text, undo, until } a message at the bottom, with Undo
     }
 
@@ -309,22 +310,26 @@ class Page {
     }
 
     /**
-     * Cluster: 1. pick the drive mode to change, 2. tap the theme it shows. "One theme for every mode" is
-     * byMode off (the plain theme, hudLayout). Every theme is in one grid, with its picture.
+     * Cluster: 1. pick the drive mode to change, 2. tap the theme it shows. "Default" is the plain theme
+     * (hudLayout): what the cluster shows until the car reports a drive mode (hud.js _chosenName). The page
+     * starts on the one in use now, so a tap on a picture changes what is on the cluster, as lookKey() did.
+     * "One theme for every mode" is byMode off (hudLayout alone). Every theme is in one grid, with its picture.
      */
     lookModes(cv, bottom) {
-        const by = this.get('byMode') === true, nowKey = MODE_KEY[this.hud.driveMode];
-        if (!this.editMode) this.editMode = nowKey || 'inSport';
-        const key = by ? this.editMode : 'hudLayout', modeName = (MODES.find((m) => m[0] === this.editMode) || MODES[1])[1];
+        const by = this.get('byMode') === true, carMode = MODE_KEY[this.hud.driveMode], nowKey = by && carMode ? carMode : 'hudLayout';
+        // follow the car: when what is in use changes (a mode reported, or a different one), start on that again
+        if (!this.editMode || this.editNow !== nowKey) { this.editMode = nowKey; this.editNow = nowKey; }
+        const key = by ? this.editMode : 'hudLayout';
+        const segs = [['hudLayout', 'Default']].concat(MODES), modeName = (segs.find((m) => m[0] === this.editMode) || segs[0])[1];
         // 1. the drive mode
         let y = CT;
         cv.text('1. Drive mode', X0, y + 24, 17, C.text, B);
-        cv.text(by ? (nowKey ? 'Pick the mode to change' : 'Drive mode not detected yet') : 'Not used now', X0, y + 44, 14, C.dim, L);
+        cv.text(by ? (carMode ? 'Pick the mode to change' : 'Not detected yet: Default shows') : 'Not used now', X0, y + 44, 14, C.dim, L);
         const sx = X0 + 200;
         if (by) {
-            segmented(cv, sx, y, MODES.map((m) => ({
+            segmented(cv, sx, y, segs.map((m) => ({
                 text: m[1], small: m[0] === nowKey ? ' · in use now' : '', sub: 'Shows ' + this.layoutName(this.get(m[0])),
-                on: m[0] === this.editMode, w: 236, key: 'mode:' + m[0], run: () => { this.editMode = m[0]; this.kick(); },
+                on: m[0] === this.editMode, w: 214, key: 'mode:' + m[0], run: () => { this.editMode = m[0]; this.kick(); },
             })), 48);
         } else {
             cv.roundRect(sx, y, 720, 56, 12, C.field);
@@ -339,10 +344,12 @@ class Page {
         cv.target(swx - 16 - lw, y, lw + 68, 56, () => this.set('byMode', !by), 'set:byMode', 12);
         // 2. the theme, and the off switch for every mode
         y = CT + 72;
-        const title = by ? '2. Theme for ' + modeName + ' mode' : '2. Theme for every mode';
+        const def = key === 'hudLayout';
+        const title = !by ? '2. Theme for every mode' : def ? '2. Default theme' : '2. Theme for ' + modeName + ' mode';
         cv.text(title, X0, y + 26, 17, C.text, B);
         const note = this.yieldNote();
-        cv.text(note || (by ? 'Tap a picture to use it in ' + modeName : 'Tap a picture to use it all the time'), X0 + cv.textWidth(title, 17, B) + 14, y + 26, 14, note ? C.amber : C.dim, L);
+        const stepHint = !by ? 'Tap a picture to use it all the time' : def ? 'Shows whenever the car hasn\'t reported a drive mode' : 'Tap a picture to use it in ' + modeName;
+        cv.text(note || stepHint, X0 + cv.textWidth(title, 17, B) + 14, y + 26, 14, note ? C.amber : C.dim, L);
         const offText = 'Show BMW\'s own cluster in every mode', ow = pillW(cv, offText, 15) + 64;
         pill(cv, X1 - ow, y + 2, ow, 40, offText, 'outline', () => this.allOff(), 'look:alloff', 15, 'power');
         // the gallery: 7 across, as big as the room lets them be
@@ -802,7 +809,10 @@ class Page {
     settingRow(cv, x, y, w, k, h) {
         if (k === '@details') {
             this.actionRow(cv, x, y, w, h, 'Details for bug reports', 'Drive mode signals and what the app is doing', 'Show details', false, () => {
-                const diag = this.hud.modeDiagLines ? this.hud.modeDiagLines(this.cfg.modeCheck || []) : [];
+                let diag = this.hud.modeDiagLines ? this.hud.modeDiagLines(this.cfg.modeCheck || []) : [];
+                // the engine only watches the drive mode signals while the theme changes with the mode (byMode)
+                if (!diag.length) diag = ['Drive mode signals: ' + (this.cluster() ? 'turn off "One theme for every mode" (Theme tab)'
+                    : 'turn on "Change layout with the drive mode buttons" (Layouts tab)') + ' to see what the car sends.'];
                 this.confirm = {
                     title: 'Details for bug reports',
                     lines: diag.concat(['', 'What the app is doing: ' + (this.hud.lastStatus || 'nothing reported yet'), '', 'If something looks wrong on your car, open an issue and include these lines.']),

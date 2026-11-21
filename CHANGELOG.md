@@ -4,6 +4,11 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 21 2026
 
+- **Cluster Themes 0.22.1, HUD Widgets 0.16.1:**
+  - **Fixed: in 0.22.0 a tap on a theme could change nothing on the cluster.** While the car hasn't reported a drive mode, the cluster shows the plain theme, but the new Theme tab started on Sport, so a tap set Sport's theme instead. The Theme tab now has a fourth choice, **Default** (what shows until the car reports a drive mode), and starts on whichever is in use now: a tap changes what the cluster shows, as before 0.22.0. Comfort, Sport and Eco Pro can still be set ahead.
+  - **Details for bug reports** says how to see the drive mode signals when they are hidden (they show only while the theme changes with the drive mode).
+  - Every tap on the page now checked against 0.21.3's page: in every car state, each button sets the same settings as it did there.
+  - Not yet tested on a car.
 - **Cluster Themes 0.22.0, HUD Widgets 0.16.0: a new look for the page on the center screen, and every button says what it does.**
   - **Plain and quiet:** near-black, white text, one font, and colour only for status (green when the theme is on, amber for fake data, red only on Reset everything). The tabs run along the top as words. The kit's own All settings list and the controller's focus ring are grey to match.
   - **Clearer words everywhere:** Readouts is now **Gauges**, Badge **Model name**, Map **Waze map** and Alerts **Warnings & shift lights**. Every setting has a plain name and a grey line under it saying what it does: Cold-engine rev guard is **Shift earlier while the engine is cold**, Count in and Fixed rpm band are **Timed** and **Fixed**, Temperatures only when they matter is **Hide oil and coolant when they are normal**, Leave room for the driver camera is **Keep the top centre clear**, the G-meter's Range is **Circle edge**, and so on. A list of choices says what each choice means. The kit's own All settings list keeps the old names.
