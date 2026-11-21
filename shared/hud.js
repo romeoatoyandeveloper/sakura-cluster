@@ -405,9 +405,9 @@ const PHOTO_STAR_MS = 125;
 const PHOTO_STAR_RAD = 0.6;
 const PHOTO_HEART_S = 4;
 // Scene themes (widget type "scene", shaders.js scene_*): which of the scene inputs each scene's shader declares (u_a its
-// clocks, u_b its numbers, u_g the g), so only those are sent; u_v, u_keep, u_c1..u_c4 and u_dim go to every scene
+// clocks, u_b its numbers, u_g the g), so only those are sent; u_drive, u_keep, u_c1..u_c4 and u_dim go to every scene
 const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg' };
-const SCENE_SPEED = 200;              // km/h at u_v.x = 1
+const SCENE_SPEED = 200;              // km/h at u_drive.x = 1
             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
 const PRESS_UNITS = { 1: 'BAR', 2: 'KPA', 3: 'PSI' }, TEMP_UNITS = { 1: 'C', 2: 'F' };
@@ -2417,7 +2417,7 @@ class HudApp {
             c.uniform(ref, 'u_keep', [k[0] - w.x, k[1] - w.y, k[2] - w.x, k[3] - w.y]);
             ['c1', 'c2', 'c3', 'c4'].forEach((r) => c.uniform(ref, 'u_' + r, rgb(color(t, r))));
             c.uniform(ref, 'u_dim', [this.nightOn ? (isNum(w.nightDim) ? w.nightDim : 0.75) : 1]);
-            c.uniform(ref, 'u_v', [0, 0, 0, 1]);
+            c.uniform(ref, 'u_drive', [0, 0, 0, 1]);
             if (uses.indexOf('a') >= 0) c.uniform(ref, 'u_a', [0, 0, 0, 0]);
             if (uses.indexOf('b') >= 0) c.uniform(ref, 'u_b', [0, 0, 0, 0]);
             if (uses.indexOf('g') >= 0) c.uniform(ref, 'u_g', [0, 0, 0, 0]);
@@ -2829,7 +2829,7 @@ class HudApp {
         x.dist = (x.dist || 0) + kmh / 3.6 * dt;
         const D = x.dist, sec = (now / 1000) % 600, max = this._barMax(), q = (v) => Math.round(Math.min(1, Math.max(0, v)) * 1000) / 1000;
         const flash = this._shift().now && Math.floor(now / 125) % 2 === 0 ? 1 : 0;
-        send('u_v', [q(kmh / SCENE_SPEED), isNum(rpm) ? q(rpm / max) : 0, flash, q(this._redMarks(max)[0])]);
+        send('u_drive', [q(kmh / SCENE_SPEED), isNum(rpm) ? q(rpm / max) : 0, flash, q(this._redMarks(max)[0])]);
         const s = w.scene, r2 = (v) => Math.round(v * 100) / 100;
         if (s === 'synth') send('u_a', [r2((D / 8) % 1), Math.round((D * 0.6) % 11610), r2(sec)]);
         else if (s === 'warp') {

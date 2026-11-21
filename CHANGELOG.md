@@ -4,6 +4,10 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 21 2026
 
+- **Cluster Themes 0.21.1, HUD Widgets 0.15.2:**
+  - **The seven new themes draw their backgrounds on the car.** Night Drive, Warp, Paper, Light Trails, Aurora, Orbital and VFD showed only their text over BMW's own cluster: their backdrop shader used the name `u_v` for its speed and revs, a name cluster-render keeps for its own 3D view matrix, so the car refused the layer. It has another name now. The shader check (`tools/shader_budget.js`, also run by the bench) now fails any shader using one of cluster-render's own names, which the bench's stand-in renderer didn't know about.
+  - HUD Widgets: no change you will see.
+  - Not yet tested on a car.
 - **Sport ambient pulse 1.0.0 (new tool):** when the drive mode goes into Sport, Sport Plus or Sport Individual, the ambient light pulses red three times, then is exactly as it was. A background service, no screen; install it from the Store (it is listed, never pushed as an update). It needs IterioDev's Ambient Light app, whose Comfort tool reads the drive mode and drives the lights; nothing is coded in the car. Starts at the next start of the head unit. Not yet tested on a car. [Read more](native/sport-ambient-pulse/README.md)
 - **Cluster Themes 0.21.0:**
   - **Seven new themes.** Four moving scenes, each drawn by one shader with no pictures: **Night Drive** (a neon grid running towards a striped synthwave sun), **Warp** (stars streaming past, the revs a ring), **Paper** (ink on warm paper, the revs one inked line) and **Light Trails** (a long-exposure night highway). And three built from designs on the app's design canvas: **Aurora** (EV glass cards and a glowing ring gauge), **Orbital** (the revs as a satellite going round an orbit over a planet) and **VFD**, an 80s vacuum-fluorescent dash in cyan, amber and green with ghost 8s behind every number and a skyline rev graph that turns orange from half way.

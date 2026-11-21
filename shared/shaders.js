@@ -2013,7 +2013,7 @@ void main() {
 // ---------------------------------------------------------------------------------------------------------------------
 // Scene themes (widget type "scene", hud.js _sceneUpdate): a whole theme's backdrop in one effect layer, drawn with no
 // pictures. Every scene gets the same inputs; positions are layer px (u_size), (0,0) the top-left:
-//   u_v   x speed 0..1 (of 200 km/h), y revs 0..1 (of the bar max), z the shift flash (0 / 1), w the redline 0..1
+//   u_drive   x speed 0..1 (of 200 km/h), y revs 0..1 (of the bar max), z the shift flash (0 / 1), w the redline 0..1
 //   u_a   the scene's clocks (distance and time phases, hud.js says which)       (Night Drive, Warp, Light Trails)
 //   u_b   the scene's numbers                                                     (Paper; the canvas designs, below)
 //   u_g   the G dot, the warning and the shift point                              (the canvas designs, below)
@@ -2026,7 +2026,7 @@ precision mediump float;
 #endif
 varying vec2 v_uv;
 uniform vec2 u_size;
-uniform vec4 u_v;
+uniform vec4 u_drive;
 uniform vec4 u_keep;
 uniform vec3 u_c1;
 uniform vec3 u_c2;
@@ -2060,7 +2060,7 @@ void main() {
         }
         vec2 sc = vec2(960.0, HZ - 30.0);
         float R = 210.0, d = length(p - sc);
-        c += u_c2 * 0.45 * (0.6 + 0.9 * u_v.y) * exp(-max(d - R, 0.0) / 70.0) * step(R, d);
+        c += u_c2 * 0.45 * (0.6 + 0.9 * u_drive.y) * exp(-max(d - R, 0.0) / 70.0) * step(R, d);
         if (d < R) {
             vec3 sun = mix(u_c3, u_c2, smoothstep(0.1, 0.95, (p.y - (sc.y - R)) / (2.0 * R)));
             float b = p.y - (sc.y - 0.25 * R);
@@ -2086,9 +2086,9 @@ void main() {
     float hy = abs(p.y - HZ);
     if (hy < 5.0) {
         float f = abs(p.x - 960.0) / 960.0;
-        vec3 on = f >= u_v.w ? vec3(1.0, 0.25, 0.25) : mix(vec3(1.0), u_c4, f);
-        if (u_v.z > 0.5) on = vec3(1.0, 0.2, 0.3);
-        c = mix(c, f < u_v.y ? on : u_c2 * 0.55, 1.0 - smoothstep(1.5, 5.0, hy));
+        vec3 on = f >= u_drive.w ? vec3(1.0, 0.25, 0.25) : mix(vec3(1.0), u_c4, f);
+        if (u_drive.z > 0.5) on = vec3(1.0, 0.2, 0.3);
+        c = mix(c, f < u_drive.y ? on : u_c2 * 0.55, 1.0 - smoothstep(1.5, 5.0, hy));
     }
     gl_FragColor = vec4(c * u_dim, 1.0);
 }
@@ -2105,7 +2105,7 @@ void main() {
     vec2 d = p - C;
     float r = length(d), a = atan(d.y, d.x) / 6.2831853 + 0.5;
     vec3 c = u_c1 + u_c2 * 0.08 * (0.5 + 0.5 * sin(p.x * 0.0035 + 1.3 + u_a.y * 0.02) * sin(p.y * 0.006 - 0.7));
-    c += u_c3 * 0.2 * exp(-r / (120.0 + 280.0 * u_v.x));
+    c += u_c3 * 0.2 * exp(-r / (120.0 + 280.0 * u_drive.x));
     for (int i = 0; i < 3; i++) {
         float n = 110.0 + 70.0 * float(i);
         float s = floor(a * n);
@@ -2113,7 +2113,7 @@ void main() {
         float h = hash(hs);
         if (h > 0.4) {
             float ph = fract(hash(hs + 5.0) + u_a.x * (0.5 + 0.5 * h));
-            float rs = 24.0 * exp(ph * 3.9), len = rs * (0.02 + 0.6 * u_v.x);
+            float rs = 24.0 * exp(ph * 3.9), len = rs * (0.02 + 0.6 * u_drive.x);
             float da = abs(a - (s + 0.25 + 0.5 * hash(hs + 9.0)) / n) * 6.2831853 * r;
             float w = 0.5 + 1.6 * ph;
             if (da < w && r < rs && r > rs - len - 1.5)
@@ -2124,13 +2124,13 @@ void main() {
     if (r > 232.0 && r < 258.0 && f >= 0.0 && f <= 1.0) {
         float seg = f * 45.0;
         if (fract(seg) > 0.16) {
-            vec3 on = f >= u_v.w ? u_c4 : (f < 0.6 ? u_c3 : vec3(1.0));
-            if (u_v.z > 0.5) on = mod(floor(seg), 2.0) < 0.5 ? u_c4 : vec3(1.0);
-            c = f < u_v.y ? on : mix(c, u_c2 * 0.22, 0.85);
+            vec3 on = f >= u_drive.w ? u_c4 : (f < 0.6 ? u_c3 : vec3(1.0));
+            if (u_drive.z > 0.5) on = mod(floor(seg), 2.0) < 0.5 ? u_c4 : vec3(1.0);
+            c = f < u_drive.y ? on : mix(c, u_c2 * 0.22, 0.85);
         }
     }
     c = mix(c, u_c3 * 0.6, clamp(1.6 - abs(r - 266.0), 0.0, 1.0) * 0.5);
-    c += u_c3 * 0.22 * u_v.z;
+    c += u_c3 * 0.22 * u_drive.z;
     gl_FragColor = vec4(c * u_dim, 1.0);
 }
 `;
@@ -2150,9 +2150,9 @@ void main() {
         float tk = abs(fract(f * u_b.x + 0.5) - 0.5) * (x1 - x0) / u_b.x;
         float ink = clamp(1.6 - dy, 0.0, 1.0);
         if (tk < 1.0 && p.y > y0 - 14.0 && p.y < y0) ink = 1.0;
-        bool lit = f < u_v.y;
+        bool lit = f < u_drive.y;
         if (lit) ink = max(ink, clamp(5.5 - dy, 0.0, 1.0));
-        vec3 inkc = f >= u_v.w || (u_v.z > 0.5 && lit) ? u_c3 : u_c2;
+        vec3 inkc = f >= u_drive.w || (u_drive.z > 0.5 && lit) ? u_c3 : u_c2;
         c = mix(c, lit ? inkc : u_c4, ink);
     }
     gl_FragColor = vec4(c * u_dim, 1.0);
@@ -2172,7 +2172,7 @@ float trail(vec2 p, float bx, float seed) {
     float d = abs(p.x - x);
     if (d > w * 3.0) return 0.0;
     float z = 1.0 / t;
-    float run = 0.25 + 0.75 * smoothstep(0.0, 0.2 + 0.65 * u_v.x, fract(z * 0.22 - u_a.x * (1.0 + seed * 0.4) + seed));
+    float run = 0.25 + 0.75 * smoothstep(0.0, 0.2 + 0.65 * u_drive.x, fract(z * 0.22 - u_a.x * (1.0 + seed * 0.4) + seed));
     return (clamp(w - d + 0.5, 0.0, 1.0) + 0.35 * exp(-d / (w * 1.2))) * run * smoothstep(0.0, 0.08, t);
 }
 void main() {
@@ -2211,8 +2211,8 @@ void main() {
     vec2 r = p - vec2(640.0, 128.0);
     if (r.x > -10.0 && r.x < 650.0 && abs(r.y) < 12.0) {
         float f = clamp(r.x / 640.0, 0.0, 1.0), dd = max(abs(r.y) - 2.0, max(-r.x, r.x - 640.0));
-        bool lit = f < u_v.y;
-        vec3 on = f >= u_v.w || u_v.z > 0.5 ? u_c3 : mix(u_c2, u_c3 * 1.2, f * f);
+        bool lit = f < u_drive.y;
+        vec3 on = f >= u_drive.w || u_drive.z > 0.5 ? u_c3 : mix(u_c2, u_c3 * 1.2, f * f);
         c = mix(c, lit ? on : u_c1 * 2.5, clamp(1.0 - dd, 0.0, 1.0));
         if (lit) c += on * 0.45 * exp(-max(dd, 0.0) / 5.0);
     }
@@ -2224,7 +2224,7 @@ void main() {
 // Terminal variants): their shapes, gauges and light here, their text as text widgets (tools/gen_scenes.py places them
 // where the designs do). They get u_b: oil, coolant, fuel and boost
 // as their bars' fills 0..1; u_g: x / y the G dot's offset in g (screen directions), z coolant over its limit, w the
-// shift point (steady while it lasts; u_v.z is its 4 Hz blink); u_a.x seconds.
+// shift point (steady while it lasts; u_drive.z is its 4 Hz blink); u_a.x seconds.
 
 // Aurora (05 · AURORA, Modern EV glass): drifting aurora light behind frosted glass cards, a glowing ring gauge (r 235
 // round 960,405, 240 degrees over the top) lit mint to violet up to the revs with a red zone and a white dot at its end,
@@ -2287,12 +2287,12 @@ void main() {
     bool shift = u_g.w > 0.5;
     float pulse = shift ? 0.775 + 0.225 * sin(u_a.x * 6.2832) : 1.0;
     vec3 lit = shift ? u_c3 : grad(p.x);
-    float fe = clamp(u_v.y, 0.0, 1.0), ae = -2.0944 + fe * 4.1888;
+    float fe = clamp(u_drive.y, 0.0, 1.0), ae = -2.0944 + fe * 4.1888;
     vec2 E = vec2(960.0, 405.0) + 235.0 * vec2(sin(ae), -cos(ae));
     vec2 S0 = vec2(960.0, 405.0) + 235.0 * vec2(sin(-2.0944), -cos(-2.0944));
     float onArc = f >= 0.0 && f <= 1.0 ? abs(r - 235.0) : min(length(p - S0), length(p - (vec2(960.0, 405.0) + 235.0 * vec2(sin(2.0944), -cos(2.0944)))));
     c = mix(c, vec3(1.0), 0.07 * clamp(6.5 - onArc, 0.0, 1.0));
-    if (f >= u_v.w && f <= 1.0) c = mix(c, u_c4, 0.55 * clamp(6.5 - abs(r - 235.0), 0.0, 1.0));
+    if (f >= u_drive.w && f <= 1.0) c = mix(c, u_c4, 0.55 * clamp(6.5 - abs(r - 235.0), 0.0, 1.0));
     float litD = (f >= 0.0 && f <= fe) ? abs(r - 235.0) : min(length(p - S0), length(p - E));
     c += lit * 0.45 * pulse * exp(-max(litD - 5.0, 0.0) / 7.0) * step(litD, 40.0);
     c = mix(c, lit, pulse * clamp(5.5 - litD, 0.0, 1.0));
@@ -2308,7 +2308,7 @@ void main() {
     // the mode pill, and the shift-up / warning pill under the speed
     float pd = rbox(p, vec4(885.0, 232.0, 150.0, 30.0), 15.0);
     if (pd < 0.5) c = mix(c, abs(pd + 0.5) < 1.0 ? mix(c, u_c1, 0.3) : mix(c, u_c1, 0.1), clamp(0.5 - pd, 0.0, 1.0));
-    bool blinkOn = u_v.z > 0.5;
+    bool blinkOn = u_drive.z > 0.5;
     if ((shift && blinkOn) || (!shift && u_g.z > 0.5)) {
         vec3 pc = shift ? u_c3 : AMBER;
         vec4 pr = shift ? vec4(894.0, 570.0, 132.0, 36.0) : vec4(776.0, 570.0, 368.0, 36.0);
@@ -2386,8 +2386,8 @@ void main() {
     if (onArc) {
         float f = fracOf(aa);
         c = mix(c, u_c1, 0.12 * clamp(2.0 - abs(ed), 0.0, 1.0));
-        if (f >= u_v.w) c = mix(c, u_c4, 0.7 * clamp(2.0 - abs(ed), 0.0, 1.0));
-        if (f <= u_v.y) {
+        if (f >= u_drive.w) c = mix(c, u_c4, 0.7 * clamp(2.0 - abs(ed), 0.0, 1.0));
+        if (f <= u_drive.y) {
             c += lit * 0.5 * pulse * 0.6 * exp(-abs(ed) / 4.0);
             c = mix(c, lit, pulse * clamp(2.0 - abs(ed), 0.0, 1.0));
         }
@@ -2400,10 +2400,10 @@ void main() {
         float along = dot(dm, n), across = dot(dm, vec2(-n.y, n.x));
         if (along > 0.0 && along < 8.0 && abs(across) < 0.75) c = k == 7 ? u_c4 : GREY;
     }
-    float sa = radians(angOf(u_v.y));
+    float sa = radians(angOf(u_drive.y));
     vec2 S = OC + OR * vec2(cos(sa), sin(sa));
     float sd = length(p - S);
-    bool sOn = !shift || u_v.z > 0.5;
+    bool sOn = !shift || u_drive.z > 0.5;
     if (sOn) {
         c = mix(c, lit, 0.45 * clamp(1.0 - abs(sd - 15.0), 0.0, 1.0));
         c = mix(c, shift ? u_c2 : vec3(0.933, 0.953, 1.0), clamp(7.5 - sd, 0.0, 1.0));
@@ -2428,7 +2428,7 @@ void main() {
     c = mix(c, u_c1, clamp(8.5 - dd, 0.0, 1.0)) + u_c1 * 0.3 * exp(-max(dd - 8.0, 0.0) / 6.0);
     // the SHIFT tag (blinking fast) or the COOLANT ANOMALY tag (blinking at 1 Hz), top middle
     bool warn = u_g.z > 0.5 && !shift;
-    if ((shift && u_v.z > 0.5) || (warn && fract(u_a.x) < 0.5)) {
+    if ((shift && u_drive.z > 0.5) || (warn && fract(u_a.x) < 0.5)) {
         vec4 tr = shift ? vec4(896.0, 128.0, 128.0, 31.0) : vec4(756.0, 128.0, 408.0, 31.0);
         vec3 tc = shift ? u_c2 : u_c3;
         float td = rbox(p, tr);
@@ -2506,12 +2506,12 @@ void main() {
         float bh = floor(14.0 + i * 50.0 / 39.0 + 0.5);
         vec2 b = abs(p - vec2(527.0 + i * 22.0, 206.0 - 0.5 * bh)) - vec2(7.0, 0.5 * bh);
         float d = length(max(b, 0.0)) + min(max(b.x, b.y), 0.0);
-        bool on = i < floor(u_v.y * 40.0 + 0.5) - 0.5;
+        bool on = i < floor(u_drive.y * 40.0 + 0.5) - 0.5;
         float f = (i + 0.5) / 40.0;
-        vec3 zc = f > (u_v.w > 0.3 ? u_v.w : 0.93) ? RD : f > 0.5 ? OR : f > 0.42 ? AM : f > 0.3 ? GR : CY;
-        vec3 col = shift ? (u_v.z > 0.5 ? OR : RD) : zc;
+        vec3 zc = f > (u_drive.w > 0.3 ? u_drive.w : 0.93) ? RD : f > 0.5 ? OR : f > 0.42 ? AM : f > 0.3 ? GR : CY;
+        vec3 col = shift ? (u_drive.z > 0.5 ? OR : RD) : zc;
         if (d < 0.0) c = on ? col : zc * 0.16;
-        else if (on && !(shift && u_v.z < 0.5)) c += col * 0.45 * exp(-d / 4.0);
+        else if (on && !(shift && u_drive.z < 0.5)) c += col * 0.45 * exp(-d / 4.0);
     }
     // oil and coolant (red over their limits), fuel, boost
     bool wo = u_a.x > 0.5, wc = u_g.z > 0.5;

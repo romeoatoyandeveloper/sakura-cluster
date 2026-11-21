@@ -178,9 +178,21 @@ function uniformVectors(code) {
     return { declared, packed: rows };
 }
 
+/* cluster-render fills these where a shader mentions them (src/graph_ramses*.cpp: whole words, comments too) as the
+ * renderer's mat4s, PROTOCOL.md "Shaders"; anything else of that name and the effect does not build on the car, the
+ * layer refused ("effect did not compile"). The bench's stand-in renderer doesn't know them (the scene themes'
+ * "u_v", Cluster Themes 0.21.0: no backdrop on the car). */
+const RESERVED = ['u_mvp', 'u_mv', 'u_m', 'u_v', 'u_p', 'u_normal'];
+function reservedMisuse(src) {
+    return RESERVED.filter((n) => new RegExp('(^|[^A-Za-z0-9_])' + n + '(?![A-Za-z0-9_])').test(src) &&
+        !new RegExp('uniform\\s+(?:(?:lowp|mediump|highp)\\s+)?mat4\\s+' + n + '\\s*;').test(src));
+}
+
 /** One effect layer: { level 'ok' | 'warn' | 'crash', text, ... } for fragment shader `src` on a w x h layer
  *  (w, h default the whole panel). */
 function layer(src, w, h, target) {
+    const bad = reservedMisuse(src);
+    if (bad.length) return { level: 'crash', text: bad.join(', ') + ': cluster-render\'s own mat4 uniform names; the effect does not build on the car', reads: 0, tokens: 0, work: 0, uniforms: 0, packed: 0, load: 0 };
     const m = measure(src);
     if (!m) return { level: 'ok', text: 'no main', reads: 0, tokens: 0, work: 0, uniforms: 0, packed: 0, load: 0 };
     const share = ((w || 1920) * (h || 720)) / PANEL, load = Math.round(m.work * share);
@@ -204,7 +216,7 @@ function compile(src) {
     return { ok: run.status === 0, errors };
 }
 
-module.exports = { measure, layer, compile, uniformVectors, READS_GOOD, READS_CRASH, TOKENS_GOOD, HUD_UNIFORMS };
+module.exports = { measure, layer, compile, uniformVectors, reservedMisuse, RESERVED, READS_GOOD, READS_CRASH, TOKENS_GOOD, HUD_UNIFORMS };
 
 if (require.main === module) {
     // every effect layer of every built-in layout, at its real size (layouts are plain JSON)
