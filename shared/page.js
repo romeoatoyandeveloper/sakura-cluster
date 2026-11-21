@@ -423,13 +423,13 @@ class Page {
         // live state from waze.js: the map showing, waiting, the Waze app busy, Waze on Cluster missing
         const info = this.hud.waze ? this.hud.waze.info() : { text: 'Not available in this app', up: false, ok: false };
         let text = info.text;
-        if (this.get('mapInTheme') && !this.hud.mapLayout && this.hud.activeName !== 'off') text = 'This theme has no map version (GT3, Sport and M do)';
+        if (this.get('mapInTheme') && !this.hud.mapLayout && this.hud.activeName !== 'off') text = 'This theme has no map version (Sport and M do)';
         glass(cv, CX, y, w, 46, false);
         cv.circle(CX + 26, y + 23, 7, info.up ? C.live : info.ok ? C.dim : '#e0a340');
         cv.text(text, CX + 46, y + 30, 18, info.up ? C.live : C.text, { literal: true });
         y += 54;
         note(cv, CX, y + 26, [
-            'On: GT3, Sport and M open a window in the middle and Waze on Cluster draws its map in it, above',
+            'On: Sport and M open a window in the middle and Waze on Cluster draws its map in it, above',
             'BMW\'s own map view, so nothing shows twice. When the map goes away the theme fills back in.',
             'While on, Waze\'s map on the HUD is off (the cluster and the HUD share one picture).',
             'Needs robertnisipeanu\'s Waze on Cluster. Turning this off gives Waze its usual place back.',
@@ -465,7 +465,7 @@ class Page {
         glass(cv, rx, y, rw, 56, model === 'none');
         cv.text('No badge', rx + 18, y + 35, 19, C.text, { literal: true });
         cv.target(rx, y, rw, 56, () => this.set('badge', 'none'), 'badge:none', 14);
-        note(cv, rx, y + 92, ['Drawn as text in the theme\'s own font.', 'GT3: top left. Sport and M: bottom centre.']);
+        note(cv, rx, y + 92, ['Drawn as text in the theme\'s own font.', 'Sport and M: bottom centre.']);
     }
 
     /* ---------- Alerts (both) ---------- */

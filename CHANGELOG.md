@@ -2,6 +2,16 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 21 2026
+
+- **Cluster Themes 0.21.0:**
+  - **Seven new themes.** Four moving scenes, each drawn by one shader with no pictures: **Night Drive** (a neon grid running towards a striped synthwave sun), **Warp** (stars streaming past, the revs a ring), **Paper** (ink on warm paper, the revs one inked line) and **Light Trails** (a long-exposure night highway). And three built from designs on the app's design canvas: **Aurora** (EV glass cards and a glowing ring gauge), **Orbital** (the revs as a satellite going round an orbit over a planet) and **VFD**, an 80s vacuum-fluorescent dash in cyan, amber and green with ghost 8s behind every number and a skyline rev graph that turns orange from half way.
+  - **Seven themes retired:** GT3, M view, Vector, Minimal, Drag, Rally and Dyno. A car set to one of them, as the theme or for a drive mode, now shows the nearest one still here instead of a blank cluster: Track for GT3, Drag, Dyno and Rally, M for M view, Sport for Vector, and Cruise for Minimal.
+  - **Track is the theme out of the box** and in Sport, where GT3 was.
+  - The fonts only the retired themes used are gone; the new themes bring their own, so the app is about 2.3 MB bigger than 0.20.0. The new themes have pictures on the Themes tab.
+  - HUD Widgets: unchanged.
+  - Not yet tested on a car.
+
 ## Nov 20 2026
 
 - **Cluster Themes 0.20.0, HUD Widgets 0.15.1:**

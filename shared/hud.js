@@ -186,19 +186,13 @@
  *             "pink" that breathes while the car stands. Its labels and values are text widgets.
  *   scene     effect layer (shaders.js scene_<"scene">): a whole theme's backdrop drawn with no pictures, moving with the car
  *             (_sceneUpdate says what each gets): "synth" Night Drive (a neon grid to a striped sun, the revs along the
- *             horizon), "warp" Warp (stars streaming out, the revs a ring), "neon" Neon City (a rainy skyline sliding past,
- *             the revs a neon tube), "jet" Jet HUD (a fighter's pitch ladder, tapes and marker), "paper" Paper (an e-ink
- *             page, the revs one inked line), "seasons" Four Seasons (a Dutch landscape in the season's colours; "season":
- *             spring | summer | autumn | winter fixes it), "chrono" Chronograph (two watch dials with hands, lume at night),
- *             "aurora" Aurora (northern lights over a lake, livelier with the revs), "trails" Light Trails (a long-exposure
- *             night highway), "falls" Neon Falls (a neon city's waterfalls flowing into a lagoon, pixel-art look), "swim"
- *             Cosmic Swim (an astronaut bobbing in a glowing nebula sea); pixel scenes: "train" Night Train (a lit train on a
- *             viaduct in snowy mountains), "rain" Rainy Window (a rainy neon city through a window, a cat on the sill),
- *             "orbit" Station Window (Earth turning below a space station's window, a sunrise); from the design canvas:
- *             "glass" Aurora (EV glass: frosted cards, a glowing ring gauge), "orbital" Orbital (space telemetry: the revs
- *             as a satellite going round an orbit over a planet's horizon), "vfd" VFD (an 80s vacuum-fluorescent dash: a
- *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text). Colour roles "c1".."c4" (each shader's header says what they
- *             are), "keep" [x0, y0, x1, y1] see-through, "nightDim" (0.75) at night. Their numbers are text widgets.
+ *             horizon), "warp" Warp (stars streaming out, the revs a ring), "paper" Paper (an e-ink page, the revs one inked
+ *             line), "trails" Light Trails (a long-exposure night highway); from the design canvas: "glass" Aurora (EV
+ *             glass: frosted cards, a glowing ring gauge), "orbital" Orbital (space telemetry: the revs as a satellite going
+ *             round an orbit over a planet's horizon), "vfd" VFD (an 80s vacuum-fluorescent dash in three phosphors: a
+ *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text). Colour roles
+ *             "c1".."c4" (each shader's header says what they are), "keep" [x0, y0, x1, y1] see-through, "nightDim" (0.75)
+ *             at night. Their numbers are text widgets.
  * Any image widget: "own": true gives it its own image layer instead of a place in a packed sheet (above).
  * Any widget: "conn": 0..3 puts its layer (or its sheet) on that connection to cluster-render. The 8-layer limit
  *   is per connection, so a second socket from the same app gets another 8 (DukeAPenguin saw 28 layers over four
@@ -412,7 +406,7 @@ const PHOTO_STAR_RAD = 0.6;
 const PHOTO_HEART_S = 4;
 // Scene themes (widget type "scene", shaders.js scene_*): which of the scene inputs each scene's shader declares (u_a its
 // clocks, u_b its numbers, u_g the g), so only those are sent; u_v, u_keep, u_c1..u_c4 and u_dim go to every scene
-const SCENE_USES = { synth: 'a', warp: 'a', neon: 'a', jet: 'gb', paper: 'b', seasons: 'ab', chrono: 'ab', aurora: 'a', trails: 'a', falls: 'a', swim: 'a', train: 'a', rain: 'a', orbit: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg' };
+const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg' };
 const SCENE_SPEED = 200;              // km/h at u_v.x = 1
             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
@@ -545,6 +539,16 @@ class HudApp {
         this.ctx = ctx;
         this.log = ctx.log;
         this.config = (ctx.spec && ctx.spec.config) || {};
+        // a theme the app took out (its config "retiredLayouts", Cluster Themes 0.21.0), saved as the theme or for a drive
+        // mode, becomes the nearest one still there, once and saved (else setting() would fall back to the default)
+        const retired = this.config.retiredLayouts || {};
+        ['hudLayout', 'inComfort', 'inSport', 'inEco'].forEach((k) => {
+            const was = ctx.settings && ctx.settings.item(k) && ctx.settings.get(k);
+            if (was && retired[was] && ctx.settings.item(k).options.some((o) => o[0] === retired[was])) {
+                ctx.settings.set(k, retired[was]);
+                ctx.log.info('setting ' + k + ': the "' + was + '" theme was taken out, now "' + retired[was] + '"');
+            }
+        });
         // HUD_CLUSTER_SOCKET: the Mac bench's fake cluster-render; never set on the car
         this.socketPath = process.env.HUD_CLUSTER_SOCKET || this.config.socketPath || DEFAULT_PATH;
         this.clients = [];               // the connections to cluster-render: [0] the app's own, more for "conn" widgets
@@ -2802,25 +2806,14 @@ class HudApp {
 
     /**
      * A scene theme (widget type "scene"), every tick (20 Hz): the shared inputs (speed, revs, the shift flash, the
-     * redline; the g for Jet HUD) and each scene's own clocks and numbers, from the distance driven and the time:
+     * redline) and each scene's own clocks and numbers, from the distance driven and the time:
      *   synth    u_a: the grid's phase (a line every 8 m), the mountains' offset, seconds
      *   warp     u_a: how far through the stars (faster with the speed)
-     *   neon     u_a: the far and near rows' offsets, the lane dashes' phase, seconds
-     *   jet      u_b: km/h, rpm / 100, the redline / 100; u_g: the g (cornering + left, along the car + speeding up)
      *   paper    u_b: the thousands on the rev scale
-     *   seasons  u_a: seconds, the wind's offset, the fields' phase; u_b: the season (from the month, or the layout's
-     *            "season"), snowing (outside under 3 C)
-     *   chrono   u_a: lume (night), oil 0..1, the real seconds; u_b: km/h, rpm / 1000 (smoothed), the redline / 1000, fuel
-     *   aurora   u_a: the lights' clock (faster with the revs), the mountains' offset, seconds
      *   trails   u_a: the traffic's clock (faster with the speed), the dashes' phase, seconds
-     *   falls    u_a: the water's clock (faster with the revs), the flying cars' clock (faster with the speed), seconds,
-     *            the far skyline's offset
-     *   swim     u_a: the sea's clock (faster with the speed), seconds
-     *   train    u_a: the steam's clock (faster with the revs), the viaduct's offset (art px), seconds
-     *   rain     u_a: the drops' clock and the street's clock (both faster with the speed), seconds
-     *   orbit    u_a: the Earth's turn and the satellites' clock (both faster with the speed), seconds
-     *   glass,   u_b: oil, coolant, fuel, boost as their bars' fills; u_g: the G dot (g, screen directions), coolant over
-     *   orbital  its limit, the shift point; u_a: seconds
+     *   glass,   u_b: oil, coolant, fuel, boost as their bars' fills; u_g: the G dot (g, screen directions; the VFD's
+     *   orbital, the load the driver feels), coolant over its limit, the shift point; u_a: seconds (the VFD: oil over its
+     *   vfd      limit)
      * Only what changed is sent.
      */
     _sceneUpdate(x, now, force) {
@@ -2842,32 +2835,8 @@ class HudApp {
         else if (s === 'warp') {
             x.travel = ((x.travel || 0) + dt * (0.03 + 0.9 * Math.min(1, kmh / SCENE_SPEED))) % 256;
             send('u_a', [Math.round(x.travel * 1000) / 1000, r2(sec), 0, 0]);
-        } else if (s === 'neon') send('u_a', [Math.round((D * 3) % 89910), Math.round((D * 9) % 159840), r2((D * 14 / 120) % 1), r2(sec)]);
-        else if (s === 'jet') {
-            const S = this._gSigns(w), gx = this._raw('gLat'), gy = this._raw('gLong');
-            send('u_g', [isNum(gx) ? r2(-S[0] * gx) : 0, isNum(gy) ? r2(-S[1] * gy) : 0, 0, 0]);
-            send('u_b', [Math.round(kmh * 10) / 10, isNum(rpm) ? Math.round(rpm) / 100 : 0, this.setting('redline') / 100, 0]);
         } else if (s === 'paper') send('u_b', [max / 1000, 0, 0, 0]);
-        else if (s === 'seasons') {
-            const names = { spring: 0, summer: 1, autumn: 2, winter: 3 }, m = new Date().getMonth();
-            const season = w.season in names ? names[w.season] : m >= 2 && m <= 4 ? 0 : m >= 5 && m <= 7 ? 1 : m >= 8 && m <= 10 ? 2 : 3;
-            const out = this._raw('ambient');
-            send('u_a', [r2(sec), Math.round((D * 8 + sec * 18) % 20000), r2((D / 25) % 1), 0]);
-            send('u_b', [season, w.season ? 0 : isNum(out) && out < 3 ? 1 : 0, 0, 0]);
-        } else if (s === 'chrono') {
-            // the hands follow the smoothed rpm (as BMW's needle does); the small seconds run on the real time
-            const r = isNum(this.rpmF) ? this.rpmF : rpm, oil = this._raw('oil'), fuel = this._raw('fuel'), d = new Date();
-            send('u_a', [this.nightOn ? 1 : 0, isNum(oil) ? q((oil - 50) / 100) : 0, Math.round((d.getSeconds() + d.getMilliseconds() / 1000) * 20) / 20, 0]);
-            send('u_b', [Math.round(kmh * 10) / 10, isNum(r) ? Math.round(r / 10) / 100 : 0, this.setting('redline') / 1000, isNum(fuel) ? q(fuel) : 0]);
-        } else if (s === 'aurora') {
-            x.glow = ((x.glow || 0) + dt * (0.25 + 1.4 * (isNum(rpm) ? Math.min(1, rpm / max) : 0))) % 600;
-            send('u_a', [Math.round(x.glow * 100) / 100, Math.round((D * 0.8) % 15000), r2(sec), 0]);
-        } else if (s === 'falls') {
-            // the water rushes faster with the revs, the flying cars with the speed, the far skyline slides by
-            x.flow = ((x.flow || 0) + dt * (0.8 + 1.6 * (isNum(rpm) ? Math.min(1, rpm / max) : 0))) % 1000;
-            x.sky = ((x.sky || 0) + dt * (0.15 + 2.2 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
-            send('u_a', [Math.round(x.flow * 100) / 100, Math.round(x.sky * 1000) / 1000, r2(sec), Math.round((D * 0.4) % 18000)]);
-        } else if (s === 'glass' || s === 'orbital' || s === 'vfd') {
+        else if (s === 'glass' || s === 'orbital' || s === 'vfd') {
             // the canvas designs: their bars as the designs scale them (oil 100..300 F, coolant 100..260 F, fuel, boost
             // 0..25 psi), the G dot (screen directions, as the G-meter's), the coolant over its limit, the shift point
             const F = (v) => v * 1.8 + 32, oil = this._raw('oil'), cool = this._raw('coolant'), fuel = this._raw('fuel'), bst = this._raw('boost');
@@ -2877,21 +2846,6 @@ class HudApp {
             const S = this._gSigns(w), gx = this._raw('gLat'), gy = this._raw('gLong'), k = s === 'vfd' ? -1 : 1;
             send('u_g', [isNum(gx) ? r2(k * S[0] * gx) : 0, isNum(gy) ? r2(k * S[1] * gy) : 0, this._overLimit('coolant') ? 1 : 0, this._shift().now ? 1 : 0]);
             send('u_a', s === 'vfd' ? [this._overLimit('oil') ? 1 : 0, 0, 0, 0] : [r2(sec), 0, 0, 0]);   // VFD: the oil bars red over its limit
-        } else if (s === 'train') {
-            // the viaduct moves 2.2 art px a metre (60 a second at 100 km/h), the hills and peaks behind at a fraction
-            x.steam = ((x.steam || 0) + dt * (0.25 + 1.3 * (isNum(rpm) ? Math.min(1, rpm / max) : 0))) % 1000;
-            send('u_a', [Math.round(x.steam * 100) / 100, Math.round((D * 2.2) % 24000), r2(sec), 0]);
-        } else if (s === 'rain') {
-            x.drops = ((x.drops || 0) + dt * (0.6 + 4.0 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
-            x.street = ((x.street || 0) + dt * (0.15 + 1.6 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
-            send('u_a', [Math.round(x.drops * 100) / 100, r2(sec), Math.round(x.street * 1000) / 1000, 0]);
-        } else if (s === 'orbit') {
-            x.turn = ((x.turn || 0) + dt * (0.015 + 0.35 * Math.min(1, kmh / SCENE_SPEED))) % 628.32;
-            x.sats = ((x.sats || 0) + dt * (0.04 + 0.7 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
-            send('u_a', [Math.round(x.turn * 1000) / 1000, Math.round(x.sats * 1000) / 1000, r2(sec), 0]);
-        } else if (s === 'swim') {
-            x.waves = ((x.waves || 0) + dt * (0.5 + 2.5 * Math.min(1, kmh / SCENE_SPEED))) % 1000;
-            send('u_a', [Math.round(x.waves * 100) / 100, r2(sec), 0, 0]);
         } else if (s === 'trails') {
             x.traffic = ((x.traffic || 0) + dt * (0.04 + 1.5 * Math.min(1, kmh / SCENE_SPEED))) % 500;
             send('u_a', [Math.round(x.traffic * 1000) / 1000, r2((D / 9) % 1), r2(sec), 0]);

@@ -2,18 +2,19 @@
 
 <p align="center">Apps for BMW iDrive 7 head units (MGU), installed through the community MGU Store.</p>
 
-<p align="center"><img src="docs/images/cluster-gt3.gif" width="900" alt="GT3 race dash on the instrument cluster"></p>
+<p align="center"><img src="docs/images/cluster-vfd.png" width="900" alt="VFD theme on the instrument cluster"></p>
 
 ## Cluster Themes
 
 <img src="apps/cluster_themes/icon.png" width="72" align="left" alt="Cluster Themes icon">
 
-Redraws the whole instrument cluster in a theme of your choice: a GT3 race dash, an M-style cluster, an M view like the newer M cars, Vector with a music panel, a Sport view, Minimal, Track, Drag with a 0 to 60 timer, Rally with a G-meter, Retro 80s, Cruise, Dyno, a tile dash in BMW M colours, or Ribbon, with holiday editions. Pick the theme on the center screen, or let it follow the SPORT / COMFORT / ECO PRO buttons. [Read more](apps/cluster_themes/README.md)
+Redraws the whole instrument cluster in a theme of your choice: an M-style cluster, a Sport view, a Track race dash, Retro 80s, Cruise, Ribbon with holiday editions, pixel-art Sakura scenes, My Boy (a photo of a little one), and moving scenes: Night Drive, Warp, Paper, Light Trails, Aurora, Orbital and VFD, an 80s vacuum-fluorescent dash. Pick the theme on the center screen, or let it follow the SPORT / COMFORT / ECO PRO buttons. [Read more](apps/cluster_themes/README.md)
 
-<p align="center"><img src="docs/images/cluster-gt3-shift.png" width="900" alt="GT3 theme at the shift point"></p>
 <p align="center"><img src="docs/images/cluster-m.png" width="900" alt="M theme"></p>
 <p align="center"><img src="docs/images/cluster-sport.png" width="900" alt="Sport theme"></p>
-<p align="center"><img src="docs/images/cluster-dyno.png" width="900" alt="Dyno theme"></p>
+<p align="center"><img src="docs/images/cluster-track.png" width="900" alt="Track theme"></p>
+<p align="center"><img src="docs/images/cluster-nightdrive.png" width="900" alt="Night Drive theme"></p>
+<p align="center"><img src="docs/images/cluster-evaurora.png" width="900" alt="Aurora theme"></p>
 
 ## HUD Widgets
 

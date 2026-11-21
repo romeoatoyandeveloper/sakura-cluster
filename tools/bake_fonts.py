@@ -43,7 +43,7 @@ HUD_FONTS = [
     ('np_title', 'BarlowSemiCondensed-SemiBold.ttf', 22, ''.join(chr(i) for i in range(32, 127))),
     ('np_small', 'Barlow-Medium.ttf', 16, ''.join(chr(i) for i in range(32, 127))),
 ]
-# Cluster Themes, 1920x720 LCD. GT3: the race-dash look, Barlow Condensed.
+# Cluster Themes, 1920x720 LCD. The race-dash look (Track; GT3 before 0.21.0), Barlow Condensed.
 CLUSTER_FONTS = [
     ('gear', 'BarlowCondensed-Bold.ttf', 330, DIGITS + 'PRND-'),
     ('big', 'BarlowCondensed-Bold.ttf', 124, DIGITS + '.:-'),   # 124: "20.3 PSI" fits a 280 px box beside the hood; ':' for a clock in a readout slot
@@ -58,7 +58,6 @@ CLUSTER_FONTS = [
     ('m_gear', 'Orbitron[wght].ttf', 125, 'PRNDSM-' + DIGITS, 3, 'Black', {'0': 'O'}),
     ('m_speed', 'Orbitron[wght].ttf', 78, DIGITS + '-', 3, 'Black', {'0': 'O'}),
     ('m_gl', 'Orbitron[wght].ttf', 25, DIGITS + '/.-', 0, 'Black', {'0': 'O'}),
-    ('m_val', 'Barlow-Medium.ttf', 54, DIGITS + ':+-.'),
     ('m_mid', 'Orbitron[wght].ttf', 34, DIGITS + ':+-.', 0, 'Bold', {'0': 'O'}),
     ('m_tyre', 'Orbitron[wght].ttf', 25, DIGITS + '.-:', 0, 'Bold', {'0': 'O'}),   # ':' for M's map-view clock (fit)
     ('m_unit', 'Barlow-Medium.ttf', 30, LOWER + UPPER + '°/-.'),
@@ -74,24 +73,9 @@ CLUSTER_FONTS = [
     ('s_unit', 'Barlow-Medium.ttf', 24, LOWER + UPPER + DIGITS + '°/-. '),
     ('s_label', 'BarlowSemiCondensed-SemiBold.ttf', 30, UPPER + DIGITS + ' .'),
     ('s_gl', 'Michroma-Regular.ttf', 21, DIGITS + '/', 1),
-    # Vector: the music panel's song title and artist (any printable ASCII: a song's text is folded to it, hud.js
-    # mediaText), the ring gauges' numbers and labels, the track time
-    ('v_title', 'BarlowSemiCondensed-SemiBold.ttf', 38, ''.join(chr(i) for i in range(32, 127))),
-    ('v_artist', 'Barlow-Medium.ttf', 26, ''.join(chr(i) for i in range(32, 127))),
-    ('v_val', 'Michroma-Regular.ttf', 22, DIGITS + '.-+', 1),
-    ('v_label', 'BarlowSemiCondensed-SemiBold.ttf', 19, UPPER + LOWER + DIGITS + ' °%/.-'),
-    ('v_time', 'Michroma-Regular.ttf', 16, DIGITS + ':-', 1),
-    # Minimal: one huge speed, the gear, small print
-    ('n_speed', 'BarlowSemiCondensed-Medium.ttf', 260, DIGITS + '-'),
-    ('n_gear', 'BarlowSemiCondensed-SemiBold.ttf', 110, DIGITS + 'PRNDSM-'),
-    ('n_unit', 'Barlow-Medium.ttf', 34, LOWER + UPPER + '/'),
-    # Cruise and Minimal labels (r_label: the Roadster theme's, kept when Roadster was removed in 0.17.8)
+    # Cruise's labels (r_label: the Roadster theme's, kept when Roadster was removed in 0.17.8; Vector, Minimal, Drag,
+    # Rally and M view and their own fonts went in 0.21.0)
     ('r_label', 'BarlowSemiCondensed-SemiBold.ttf', 24, UPPER + LOWER + DIGITS + '/°%.: -'),
-    # Drag: the 0-60 clock
-    ('timer', 'BarlowCondensed-Bold.ttf', 220, DIGITS + '.-'),
-    # Rally: the huge gear and the readouts in the arc
-    ('y_gear', 'BarlowCondensed-Bold.ttf', 300, DIGITS + 'PRNDSM-'),
-    ('y_val', 'BarlowCondensed-Bold.ttf', 76, DIGITS + '.:-+°', 0, None, None, '°'),
     # Retro 80s: seven-segment digits (DSEG7 Classic, SIL OFL; the unlit 8s behind are the same font in "track")
     ('d7_big', 'DSEG7Classic-Bold.ttf', 170, DIGITS + '-'),
     ('d7_val', 'DSEG7Classic-Bold.ttf', 60, DIGITS + '-.:'),

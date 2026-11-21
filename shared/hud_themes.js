@@ -273,7 +273,7 @@ THEMES.myboy = {
     bg: [12, 17, 38, 255], well: [3, 4, 10, 255], panel: [12, 17, 38, 255], line: [40, 52, 84, 255],
     head: [146, 166, 206, 255], ink: [12, 12, 14, 255], accent: [124, 152, 208, 255],
 };
-// The scene themes (layouts nightdrive, warp, neoncity, jethud, paper, seasons; shaders.js scene_*): the backdrop's colours
+// The scene themes (layouts nightdrive, warp, paper, trails, evaurora, orbital, vfd; shaders.js scene_*): the backdrop's colours
 // are the roles c1..c4 (each shader's header says what they are); fg, dim and sec are the text.
 function sceneTheme(name, text, c) {
     return Object.assign({
@@ -288,28 +288,10 @@ THEMES.nightdrive = sceneTheme('Night Drive', { fg: [255, 244, 252, 255], dim: [
     [[18, 6, 48], [255, 48, 160], [255, 216, 88], [40, 232, 255]]);
 THEMES.warp = sceneTheme('Warp', { fg: [235, 245, 255, 255], dim: [130, 190, 255, 255], sec: [200, 225, 255, 255] },
     [[2, 3, 12], [120, 160, 255], [60, 220, 255], [255, 70, 100]]);
-THEMES.neoncity = sceneTheme('Neon City', { fg: [255, 236, 250, 255], dim: [255, 96, 196, 255], sec: [120, 230, 255, 255], pink: [255, 60, 180, 255] },
-    [[14, 10, 34], [255, 46, 170], [40, 220, 255], [255, 50, 60]]);
-THEMES.jethud = sceneTheme('Jet HUD', { fg: [90, 255, 156, 255], dim: [52, 196, 116, 255], sec: [200, 255, 224, 255] },
-    [[60, 255, 140], [210, 255, 230], [255, 70, 70], [2, 10, 8]]);
 THEMES.paper = sceneTheme('Paper', { fg: [26, 26, 28, 255], dim: [118, 112, 104, 255], sec: [64, 62, 60, 255] },
     [[244, 240, 230], [28, 28, 30], [196, 40, 40], [160, 156, 150]]);
-THEMES.chrono = sceneTheme('Chronograph', { fg: [236, 240, 246, 255], dim: [150, 166, 190, 255], sec: [210, 218, 232, 255], ink: [20, 22, 28, 255] },
-    [[16, 20, 30], [206, 210, 218], [22, 44, 92], [228, 56, 52]]);
-THEMES.aurora = sceneTheme('Northern Lights', { fg: [240, 250, 255, 255], dim: [150, 230, 200, 255], sec: [210, 200, 255, 255] },
-    [[6, 14, 30], [70, 255, 170], [170, 100, 255], [255, 70, 80]]);
 THEMES.trails = sceneTheme('Light Trails', { fg: [255, 248, 240, 255], dim: [255, 190, 160, 255], sec: [220, 228, 255, 255] },
     [[8, 10, 22], [255, 238, 205], [255, 48, 40], [255, 168, 70]]);
-THEMES.falls = sceneTheme('Neon Falls', { fg: [150, 236, 255, 255], dim: [110, 232, 255, 255], sec: [255, 140, 226, 255] },
-    [[22, 14, 58], [96, 228, 255], [255, 72, 206], [64, 206, 128]]);
-THEMES.swim = sceneTheme('Cosmic Swim', { fg: [246, 196, 255, 255], dim: [255, 150, 220, 255], sec: [170, 200, 255, 255] },
-    [[8, 6, 26], [255, 70, 190], [80, 110, 255], [255, 60, 70]]);
-THEMES.train = sceneTheme('Night Train', { fg: [255, 226, 160, 255], dim: [170, 196, 236, 255], sec: [236, 240, 255, 255] },
-    [[16, 22, 52], [255, 206, 110], [150, 34, 42], [24, 64, 56]]);
-THEMES.rain = sceneTheme('Rainy Window', { fg: [255, 200, 150, 255], dim: [200, 150, 220, 255], sec: [150, 200, 255, 255] },
-    [[30, 18, 56], [255, 176, 100], [255, 70, 170], [70, 160, 255]]);
-THEMES.orbit = sceneTheme('Station Window', { fg: [120, 236, 255, 255], dim: [80, 180, 200, 255], sec: [255, 214, 150, 255] },
-    [[44, 52, 68], [30, 90, 200], [90, 230, 255], [255, 214, 150]]);
 THEMES.evaurora = sceneTheme('Aurora', { fg: [244, 246, 250, 255], dim: [138, 147, 166, 255], sec: [92, 242, 201, 255],
     orange: [255, 138, 61, 255], amber: [255, 194, 77, 255], red: [255, 84, 112, 255] },
     [[92, 242, 201], [142, 124, 255], [255, 138, 61], [255, 84, 112]]);
@@ -324,8 +306,6 @@ THEMES.vfd = sceneTheme('VFD', { fg: [111, 255, 233, 255], dim: [62, 124, 116, 2
     green: [140, 255, 107, 255], gdim: [78, 122, 64, 255], gghost: [22, 41, 17, 255],
     red: [255, 75, 43, 255], orange: [255, 157, 59, 255], glow: 0.9 },
     [[111, 255, 233], [18, 41, 37], [255, 75, 43], [255, 157, 59]]);
-THEMES.seasons = sceneTheme('Four Seasons', { fg: [255, 255, 255, 255], dim: [222, 232, 246, 255], sec: [240, 246, 255, 255] },
-    [[18, 24, 38], [255, 255, 255], [255, 70, 70], [44, 46, 54]]);
 Object.keys(THEMES).forEach((k) => { THEMES[k].hot = [255, 42, 42, 255]; });
 
 // Redline layout (after cauliflowermossgrape's Redline app): rev bar segments ramp rev.from -> rev.to up to

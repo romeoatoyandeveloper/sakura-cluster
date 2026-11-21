@@ -4,9 +4,9 @@
     python3 tools/gen_scenes.py apps/cluster_themes
 
 Each is one "scene" backdrop (shaders.js scene_*: the world and the revs, drawn with no pictures) and its text, in fonts
-the app already has: Night Drive (Orbitron, the speed in chrome), Warp (Michroma, the speed inside the rev ring), Neon City
-(Barlow Condensed), Jet HUD (Orbitron in green boxes beside the tapes), Paper (Outfit, ink on paper, the rpm numbers
-under the inked line) and Four Seasons (Outfit on two plates). Text is placed by baseline using the baked fonts' metrics.
+the app already has: Night Drive (Orbitron, the speed in chrome), Warp (Michroma, the speed inside the rev ring), Paper
+(Outfit, ink on paper, the rpm numbers under the inked line) and Light Trails (Michroma); and the canvas designs, Aurora,
+Orbital and VFD, in their own fonts. Text is placed by baseline using the baked fonts' metrics.
 """
 import json, math, os, sys
 
@@ -66,33 +66,6 @@ L.text('gear', 1410, 330, 360, '{{gear}}', 's_gear', 'fg', align='right')
 L.text('mode', 1410, 376, 360, '{{mode}}', 's_label', 'sec', align='right')
 L.write()
 
-# Neon City: neon type over the skyline, the speed and clock left, the gear and outside right
-L = Layout('neoncity', 'Neon City', 'neon')
-L.text('speed_lab', 150, 206, 400, 'SPEED  {{u:speed}}', 'head', 'dim')
-L.text('speed', 150, 334, 400, '{{speed}}', 'big', 'fg', color2='pink')
-L.text('clock', 150, 404, 400, '{{time}}', 'small', 'sec')
-L.text('gear_lab', 1370, 206, 400, 'GEAR', 'head', 'dim', align='right')
-L.text('gear', 1370, 334, 400, '{{gear}}', 'n_gear', 'fg', align='right', color2='pink')
-L.text('out', 1370, 404, 400, '{{ambientN}}°', 'small', 'sec', align='right')
-L.write()
-
-# Jet HUD: the numbers in the boxes beside the tapes, the gear and the g under them, the clock above, SHIFT in the middle
-L = Layout('jethud', 'Jet HUD', 'jet')
-L.text('speed_lab', 212, 334, 144, 'SPEED', 'm_label', 'dim', align='center')
-L.text('speed', 212, 396, 144, '{{speed}}', 'm_mid', 'fg', align='center')
-L.text('rpm_lab', 1564, 334, 156, 'RPM', 'm_label', 'dim', align='center')
-L.text('rpm', 1564, 396, 156, '{{rpm}}', 'm_mid', 'fg', align='center')
-L.text('gear_lab', 212, 616, 144, 'GEAR', 'm_label', 'dim', align='center')
-L.text('gear', 212, 694, 144, '{{gear}}', 's_gear', 'fg', align='center')
-L.text('g_lab', 1564, 616, 196, 'G-FORCE', 'm_label', 'dim')
-L.text('glat_lab', 1564, 652, 76, 'LAT', 'm_label', 'dim')
-L.text('glat', 1644, 654, 116, '{{gLat}}', 'm_tyre', 'fg', align='right')
-L.text('glong_lab', 1564, 688, 76, 'LONG', 'm_label', 'dim')
-L.text('glong', 1644, 690, 116, '{{gLong}}', 'm_tyre', 'fg', align='right')
-L.text('clock', 212, 150, 144, '{{time}}', 's_val', 'fg', align='center')
-L.text('shift', 880, 470, 160, 'SHIFT', 'm_label', 'sec', align='center', showWhen='shift', rate=25)
-L.write()
-
 # Paper: the speed big in the middle, the inked rev line under it with its numbers, the clock and outside on the left, the
 # gear and range on the right, the drive mode at the foot of the page
 L = Layout('paper', 'Paper', 'paper', nightDim=0.55)
@@ -110,45 +83,6 @@ L.text('range', 1380, 396, 300, '{{range}} {{u:distLc}}', 'b_val', 'sec', align=
 L.text('mode', 560, 650, 800, '{{mode}}', 'b_label', 'dim', align='center')
 L.write()
 
-# Four Seasons: two plates over the landscape, Outfit
-L = Layout('seasons', 'Four Seasons', 'seasons')
-L.text('speed_lab', 150, 200, 200, 'SPEED', 'mb_label', 'dim')
-L.text('speed_u', 380, 200, 180, '{{u:speedLc}}', 'mb_unit', 'dim', align='right')
-L.text('speed', 150, 332, 410, '{{speed}}', 'mb_speed', 'fg', align='right')
-L.text('clock', 150, 380, 410, '{{time}} {{ampm}}', 'mb_row', 'sec')
-L.text('gear_lab', 1360, 200, 200, 'GEAR', 'mb_label', 'dim')
-L.text('gear', 1360, 332, 410, '{{gear}}', 'mb_gear', 'fg', align='center')
-L.text('out', 1360, 380, 410, '{{ambientN}}{{u:temp}}', 'mb_row', 'sec', align='right')
-L.write()
-
-# Chronograph: two watch dials (shaders.js scene_chrono); their numerals as text round the dial, the speed and revs as small
-# digital readouts in each, the gear in a white date window between them, the clock under it
-L = Layout('chrono', 'Chronograph', 'chrono')
-for (cx, cy), vals, vmax, key in (((500, 370), range(0, 261, 40), 260, 'kmh'), ((1420, 370), range(0, 9), 8, 'rpm')):
-    m = font('b_val')
-    for v in vals:
-        a = math.radians(-135 + 270 * v / vmax)
-        x, y = cx + math.sin(a) * 196, cy - math.cos(a) * 196
-        L.text('n_%s_%d' % (key, v), int(x - 40), int(y + m['cellHeight'] / 2 - m['baseline'] / 2 + 8), 80, str(v), 'b_val', 'fg', align='center')
-L.text('speed', 400, 296, 200, '{{speed}}', 'b_val', 'fg', align='center')
-L.text('speed_u', 400, 326, 200, '{{u:speedLc}}', 'b_unit', 'dim', align='center')
-L.text('rpm_u', 1320, 326, 200, 'RPM X1000', 'b_label', 'dim', align='center')
-L.text('gear', 890, 404, 140, '{{gear}}', 'b_val', 'ink', align='center')
-L.text('clock', 840, 470, 240, '{{time}}', 'b_val', 'sec', align='center')
-L.text('out', 840, 512, 240, '{{ambientN}}{{u:temp}}', 'mb_row', 'dim', align='center')
-L.write()
-
-# Aurora: Outfit, white over the night sky: the speed on the left, the gear on the right
-L = Layout('aurora', 'Northern Lights', 'aurora')
-L.text('speed_lab', 150, 210, 200, 'SPEED', 'mb_label', 'dim')
-L.text('speed_u', 390, 210, 170, '{{u:speedLc}}', 'mb_unit', 'dim', align='right')
-L.text('speed', 150, 342, 410, '{{speed}}', 'mb_speed', 'fg', align='right')
-L.text('clock', 150, 392, 410, '{{time}} {{ampm}}', 'mb_row', 'sec', align='right')
-L.text('gear_lab', 1360, 210, 200, 'GEAR', 'mb_label', 'dim')
-L.text('gear', 1360, 342, 410, '{{gear}}', 'mb_gear', 'fg')
-L.text('out', 1360, 392, 410, '{{ambientN}}{{u:temp}}', 'mb_row', 'sec')
-L.write()
-
 # Light Trails: Michroma, the speed left and the gear right of the road
 L = Layout('trails', 'Light Trails', 'trails')
 L.text('speed', 120, 300, 440, '{{speed}}', 's_hero', 'fg', align='right')
@@ -159,59 +93,7 @@ L.text('mode', 1360, 346, 440, '{{mode}}', 's_label', 'dim')
 L.text('out', 1360, 404, 440, '{{ambientN}}{{u:temp}} outside', 's_unit', 'sec')
 L.write()
 
-# Neon Falls: pixel fonts (Press Start 2P, Silkscreen) on the two plates the shader draws (art px x 4: 96,200 and 1448,200,
-# 376 x 256): the speed and clock on the left, the gear (just its number or P R N) on the right
-L = Layout('falls', 'Neon Falls', 'falls')
-L.text('speed_lab', 120, 248, 160, 'SPEED', 'sk_lab', 'dim')
-L.text('speed_u', 300, 248, 152, '{{u:speed}}', 'sk_lab', 'dim', align='right')
-L.text('speed', 120, 378, 332, '{{speed}}', 'sk_speed96', 'fg', align='right')
-L.text('clock', 120, 432, 332, '{{time}}', 'sk_row', 'sec', align='right')
-L.text('gear_lab', 1472, 248, 160, 'GEAR', 'sk_lab', 'dim')
-L.text('out', 1632, 250, 168, '{{ambientN}}°', 'sk_row', 'sec', align='right')
-L.text('gear', 1472, 450, 328, '{{gearnum}}', 'sk_gear', 'fg', align='center')
-L.write()
-
-# Cosmic Swim: Outfit over the nebula sky, the speed left and the gear right of the astronaut
-L = Layout('swim', 'Cosmic Swim', 'swim')
-L.text('speed_lab', 150, 212, 200, 'SPEED', 'mb_label', 'dim')
-L.text('speed_u', 390, 212, 170, '{{u:speedLc}}', 'mb_unit', 'dim', align='right')
-L.text('speed', 150, 344, 410, '{{speed}}', 'mb_speed', 'fg', align='right')
-L.text('clock', 150, 394, 410, '{{time}} {{ampm}}', 'mb_row', 'sec', align='right')
-L.text('gear_lab', 1360, 212, 200, 'GEAR', 'mb_label', 'dim')
-L.text('gear', 1360, 344, 410, '{{gear}}', 'mb_gear', 'fg')
-L.text('out', 1360, 394, 410, '{{ambientN}}{{u:temp}}', 'mb_row', 'sec')
-L.write()
-
-
-def pixel_hud(L, left, right, gear_x):
-    """Press Start 2P / Silkscreen text on two plates or screens (panel px): the speed, its unit and the clock on the
-    left; the gear (its number, or P R N) big on the right with its label and the outside temperature beside it."""
-    x, y, w, h = left
-    L.text('speed_lab', x + 24, y + 44, 160, 'SPEED', 'sk_lab', 'dim')
-    L.text('speed_u', x + w - 24 - 160, y + 44, 160, '{{u:speed}}', 'sk_lab', 'dim', align='right')
-    L.text('speed', x + 24, y + 154, w - 48, '{{speed}}', 'sk_speed96', 'fg', align='right')
-    L.text('clock', x + 24, y + 200, w - 48, '{{time}}', 'sk_row', 'sec', align='right')
-    x, y, w, h = right
-    L.text('gear_lab', x + 24, y + 44, 120, 'GEAR', 'sk_lab', 'dim')
-    L.text('out', x + 24, y + 86, 120, '{{ambientN}}°', 'sk_row', 'sec')
-    L.text('gear', gear_x, y + h - 4, x + w - gear_x - 12, '{{gearnum}}', 'sk_gear', 'fg', align='center')
-
-
-# Night Train: the two plates in the sky (art 24,44 and 362,44, 94 x 54)
-L = Layout('train', 'Night Train', 'train')
-pixel_hud(L, (96, 176, 376, 216), (1448, 176, 376, 216), 1580)
-L.write()
-# Rainy Window: the text on the dark walls either side of the window
-L = Layout('rain', 'Rainy Window', 'rain')
-pixel_hud(L, (24, 200, 380, 230), (1516, 210, 380, 230), 1640)
-L.write()
-# Station Window: the two wall screens (art 16,52 and 376,52, 88 x 62)
-L = Layout('orbit', 'Station Window', 'orbit')
-pixel_hud(L, (64, 208, 352, 248), (1504, 208, 352, 248), 1620)
-L.write()
-
-
-# --- the canvas designs (the "Sakura 桜 cluster theme" canvas, Modern collection), placed where their CSS puts them ---------
+# --- the canvas designs (the "Sakura 桜 cluster theme" canvas: Modern collection, Terminal variants), placed where their CSS puts them
 from PIL import ImageFont
 SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fonts-src')
 
