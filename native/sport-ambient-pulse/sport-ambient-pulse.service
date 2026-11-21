@@ -1,0 +1,20 @@
+[Unit]
+Description=Sport ambient pulse: three red pulses of the ambient light when the drive mode goes into Sport (through IterioDev's Comfort tool)
+# Comfort (iteriodev-comfort) reads the drive mode and writes the lights; without it this waits, doing nothing
+After=iteriodev-comfort.service
+
+[Service]
+Type=simple
+ExecStart=/var/opt/mgu-python/current/bin/python3 -u /var/opt/sport-ambient-pulse/current/sport_ambient_pulse.py --daemon
+# the head unit's system.conf sends a service's output nowhere by default
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=5
+# SIGTERM during a pulse puts the light back first (a second or two)
+TimeoutStopSec=15
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

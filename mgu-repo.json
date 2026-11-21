@@ -10,5 +10,8 @@
       "sdk": "oap-sdk",
       "output": "dist/{id}@{version}.tgz"
     }
-  }
+  },
+  "tools": [
+    { "id": "sport-ambient-pulse", "path": "native/sport-ambient-pulse" }
+  ]
 }

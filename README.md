@@ -16,6 +16,10 @@ Redraws the whole instrument cluster in a theme of your choice: an M-style clust
 <p align="center"><img src="docs/images/cluster-nightdrive.png" width="900" alt="Night Drive theme"></p>
 <p align="center"><img src="docs/images/cluster-evaurora.png" width="900" alt="Aurora theme"></p>
 
+## Sport ambient pulse
+
+A background tool, no screen: when the drive mode goes into Sport (Sport, Sport Plus or Sport Individual), the cabin's ambient light pulses red three times, then goes back to exactly the colour and brightness it had. Install it from the Store; it needs IterioDev's Ambient Light app, whose Comfort tool reads the drive mode and drives the lights (nothing is coded in the car). [Read more](native/sport-ambient-pulse/README.md)
+
 ## HUD Widgets
 
 <img src="apps/idrive_hud_widgets/icon.png" width="72" align="left" alt="HUD Widgets icon">
