@@ -116,6 +116,16 @@ Synthwave: a purple night sky over a neon grid that runs towards you as you driv
 
 <p align="center"><img src="../../docs/images/cluster-nightdrive.png" width="900" alt="Night Drive theme"></p>
 
+### Neon Highway
+
+Driving down a neon highway into a striped synthwave sun, between rows of low-poly neon palms, over a glowing grid, with low-poly mountains, a ringed planet and stars. The lane lines, the grid and the palms come at you with your speed, faster than real and more so the faster you go; parked, the road stands still.
+
+- **Speed:** from about 30 km/h the lane lines stretch into streaks, the grid blurs and light pulses shoot down the grid and along the road's edges. From about 50 km/h streaks of light fly out of the horizon, the grid turns purple, the sun's glow swells and the edges of the view darken. All of it is at full strength from about 150 km/h and calms down again as you slow.
+- **Revs:** the road's two edges light up from the bottom of the cluster towards the sun: cyan, then magenta, then red from your redline. At the shift point both flash.
+- **Readouts** as Night Drive's: the speed left of the sun, the gear right of it, in chrome figures, the clock and outside temperature above them.
+
+<p align="center"><img src="../../docs/images/cluster-highway.png" width="900" alt="Neon Highway theme"></p>
+
 ### Warp
 
 Stars stream out of the middle: dots when you go slowly, long streaks when you go fast. The revs are a ring round the speed in the middle, and the whole sky flashes at the shift point. The clock and outside temperature are on the left, the gear and drive mode on the right.

@@ -4,6 +4,10 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 21 2026
 
+- **Cluster Themes 0.21.4, HUD Widgets 0.15.5:**
+  - **New theme: Neon Highway.** You drive down a neon highway into a striped synthwave sun, with rows of low-poly neon palms on both sides, a grid floor, mountains, a ringed planet and stars. The lane lines, the grid and the palms come at you with your speed, faster than real and more so the faster you go; at a standstill the road stands still. From about 30 km/h it builds up: the lane lines stretch into streaks, the grid blurs, light pulses shoot down the grid and the road's edges, and from about 50 km/h streaks of light fly out of the horizon, the grid turns purple and the edges of the view darken, all at full strength from about 150 km/h. The revs light the road's two edges from the bottom of the cluster towards the sun (cyan, magenta, red from the redline), and both flash at the shift point. The speed, gear, clock and outside temperature are as Night Drive's. One shader, no pictures.
+  - HUD Widgets: no change you will see.
+  - Not yet tested on a car.
 - **Cluster Themes 0.21.3, HUD Widgets 0.15.4:**
   - **New theme: My Family: Sakura,** the family under cherry blossom by a lake at night, painted smooth: a full moon, Mount Fuji with its snow in the moonlight and a red five-storey pagoda across the water, all mirrored in the lake, cherry trees arching over the top in blossom, two stone lanterns alight beside the family on a stone bank strewn with petals, and petals falling all the time. The revs are paper lanterns hung from the branches, lighting warm from their outer ends towards the family, red from the redline, all flashing red at the shift point. The faster you drive, the harder the wind blows the petals and the faster the lake ripples. The readouts are as My Family's; the same picture of the family, three layers in all.
   - HUD Widgets: no change you will see.

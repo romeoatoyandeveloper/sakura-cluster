@@ -192,7 +192,8 @@
  *             round an orbit over a planet's horizon), "vfd" VFD (an 80s vacuum-fluorescent dash in three phosphors: a
  *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text); "canal" My
  *             Family (a Dutch canal at blue hour in pixel art, fairy lights for the revs, with a picture: "art" the
- *             hud/art asset, "photo" [x, y] where it stands, 1:1), "hanami" My Family: Sakura (cherry blossom by a lake at
+ *             hud/art asset, "photo" [x, y] where it stands, 1:1), "highway" Neon Highway (a highway into a synthwave sun between rows
+ *             of neon palms that come at you with the speed, the revs along the road's edges), "hanami" My Family: Sakura (cherry blossom by a lake at
  *             night, Mount Fuji and a pagoda, petals falling, paper lanterns for the revs, a picture as canal's). Colour roles
  *             "c1".."c4" (each shader's header says what they are), "keep" [x0, y0, x1, y1] see-through, "nightDim" (0.75)
  *             at night. Their numbers are text widgets.
@@ -409,7 +410,7 @@ const PHOTO_STAR_RAD = 0.6;
 const PHOTO_HEART_S = 4;
 // Scene themes (widget type "scene", shaders.js scene_*): which of the scene inputs each scene's shader declares (u_a its
 // clocks, u_b its numbers, u_g the g), so only those are sent; u_drive, u_keep, u_c1..u_c4 and u_dim go to every scene
-const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg', canal: 'a', hanami: 'a' };
+const SCENE_USES = { synth: 'a', warp: 'a', paper: 'b', trails: 'a', glass: 'abg', orbital: 'abg', vfd: 'abg', canal: 'a', hanami: 'a', highway: 'a' };
 const SCENE_SPEED = 200;              // km/h at u_drive.x = 1
             // the heart's breath while the car stands, seconds
 // the car's display units (Vehicle statusNewCurrentUnitsStatusExt, as BMW's own x_call reads them; car_vitals, MIT)
@@ -2820,6 +2821,8 @@ class HudApp {
      *   paper    u_b: the thousands on the rev scale
      *   trails   u_a: the traffic's clock (faster with the speed), the dashes' phase, seconds
      *   canal    u_a: the water's clock (faster with the speed), seconds, the shift point; its picture ("art", "photo") as u_art, u_photo
+     *   highway  u_a: how far the road has come (world units, faster than real, repeating every 480), seconds, the
+     *            streaks' clock (repeating every 64)
      *   hanami   u_a: the water's clock, seconds, the shift point, the wind's clock (both faster with the speed); its
      *            picture as canal's
      *   glass,   u_b: oil, coolant, fuel, boost as their bars' fills; u_g: the G dot (g, screen directions; the VFD's
@@ -2842,7 +2845,15 @@ class HudApp {
         const flash = this._shift().now && Math.floor(now / 125) % 2 === 0 ? 1 : 0;
         send('u_drive', [q(kmh / SCENE_SPEED), isNum(rpm) ? q(rpm / max) : 0, flash, q(this._redMarks(max)[0])]);
         const s = w.scene, r2 = (v) => Math.round(v * 100) / 100;
-        if (s === 'synth') send('u_a', [r2((D / 8) % 1), Math.round((D * 0.6) % 11610), r2(sec)]);
+        if (s === 'highway') {
+            // the lane dashes, the grid and the palms come at you faster than real, more so the faster you go: 1.6 x at
+            // a crawl, 3.5 x at 100 km/h, 9 x at 200 (world units: 5.4 m, the road's half width; the pattern repeats
+            // every 480). The streaks' clock runs with the speed squared (repeats every 64).
+            const f = Math.min(1, kmh / SCENE_SPEED);
+            x.travel = ((x.travel || 0) + dt * kmh / 3.6 / 5.4 * (1.6 + 7.4 * f * f)) % 480;
+            x.rush = ((x.rush || 0) + dt * (0.15 + 3.2 * f * f)) % 64;
+            send('u_a', [Math.round(x.travel * 1000) / 1000, r2(sec), Math.round(x.rush * 1000) / 1000, 0]);
+        } else if (s === 'synth') send('u_a', [r2((D / 8) % 1), Math.round((D * 0.6) % 11610), r2(sec)]);
         else if (s === 'warp') {
             x.travel = ((x.travel || 0) + dt * (0.03 + 0.9 * Math.min(1, kmh / SCENE_SPEED))) % 256;
             send('u_a', [Math.round(x.travel * 1000) / 1000, r2(sec), 0, 0]);
