@@ -193,7 +193,9 @@
  *             skyline rev graph, segment bars, a G dot grid, the ghost 8s under the seven-segment text); "canal" My
  *             Family (a Dutch canal at blue hour in pixel art, fairy lights for the revs, with a picture: "art" the
  *             hud/art asset, "photo" [x, y] where it stands, 1:1), "highway" Neon Highway (a highway into a synthwave sun between rows
- *             of neon palms that come at you with the speed, the revs along the road's edges), "hanami" My Family: Sakura (cherry blossom by a lake at
+ *             of neon palms that come at you with the speed, the revs along the road's edges; with "hole", "holeWhen",
+ *             "holeInset", "holeRadius" as fill's it opens a map window with a neon frame, Neon Highway + Map: give the
+ *             scene z 1 so it sits over the Waze map, and the layout "mapLive": true), "hanami" My Family: Sakura (cherry blossom by a lake at
  *             night, Mount Fuji and a pagoda, petals falling, paper lanterns for the revs, a picture as canal's). Colour roles
  *             "c1".."c4" (each shader's header says what they are), "keep" [x0, y0, x1, y1] see-through, "nightDim" (0.75)
  *             at night. Their numbers are text widgets.
@@ -2426,6 +2428,10 @@ class HudApp {
             if (uses.indexOf('a') >= 0) c.uniform(ref, 'u_a', [0, 0, 0, 0]);
             if (uses.indexOf('b') >= 0) c.uniform(ref, 'u_b', [0, 0, 0, 0]);
             if (uses.indexOf('g') >= 0) c.uniform(ref, 'u_g', [0, 0, 0, 0]);
+            if (w.hole) {        // a map window (Neon Highway + Map): see-through while "holeWhen" is on, as fill's
+                c.uniform(ref, 'u_hole', this._hole(w));
+                c.uniform(ref, 'u_holeR', [this._holeRadius(w)]);
+            }
             if (w.art) {         // a picture in the scene (My Family's), drawn 1:1 at "photo" [x, y] (panel px)
                 const art = this._artAsset(x, w.art), a = art ? this.arts.get(x.ci + ':' + w.art) : null, ph = w.photo || [0, 0];
                 if (art) c.bind(ref, 'u_art', art);

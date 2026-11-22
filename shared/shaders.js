@@ -2101,6 +2101,8 @@ void main() {
 // flashing at the shift point; the sun's glow pulses with them. u_a: x the distance, y seconds.
 const SCENE_HIGHWAY = SCENE_HEAD + `uniform vec4 u_a;
 uniform vec4 u_b;
+uniform vec4 u_hole;
+uniform float u_holeR;
 const float HZ = 410.0;
 const float G = 1.355;
 const float D = 900.0;
@@ -2137,6 +2139,7 @@ void main() {
     // depth Z has the road's middle 329 B Z / (30 + Z) px out (the road bending away with Z squared, its far end 329 B
     // px out), and all at the horizon swings H = 190 B px towards it (less, so the sun stays clear of the figures)
     float B = u_b.x, ca = cos(0.02 * B), sa = sin(0.02 * B), H = 190.0 * B;
+    vec2 p0 = p;
     p -= vec2(960.0, 560.0);
     p = vec2(960.0, 560.0) + vec2(ca * p.x + sa * p.y, ca * p.y - sa * p.x);
     // k2 the speed effects (from 30 km/h, full at 120), k3 the strongest ones (from 50 km/h, full at 150)
@@ -2233,7 +2236,17 @@ void main() {
     }
     // braking hard: the scene runs red, with a flash as it starts
     c = mix(c, vec3(dot(c, vec3(0.5, 0.35, 0.15)) * 1.4 + 0.1, 0.02, 0.07), 0.5 * u_b.y) + vec3(1.0, 0.08, 0.12) * 0.45 * u_b.z;
-    gl_FragColor = vec4(c * u_dim, 1.0);
+    // the map window (Neon Highway + Map, while the Waze map shows): see-through, fixed on the panel (not banked), in a
+    // neon frame from cyan to magenta that glows outwards and runs red when braking
+    float al = 1.0;
+    if (u_hole.z > 0.0) {
+        vec2 hs = u_hole.zw * 0.5, hq = abs(p0 - u_hole.xy - hs) - (hs - vec2(u_holeR));
+        float hd = length(max(hq, 0.0)) + min(max(hq.x, hq.y), 0.0) - u_holeR;
+        vec3 fc = mix(mix(vec3(0.35, 0.95, 1.0), vec3(1.0, 0.35, 0.85), clamp((p0.x - u_hole.x) / u_hole.z, 0.0, 1.0)), vec3(1.0, 0.18, 0.22), u_b.y);
+        c = mix(c, fc, smoothstep(2.6, 1.2, abs(hd - 2.5))) + fc * 0.4 * exp(-max(hd - 2.5, 0.0) / 16.0) * step(0.0, hd);
+        al = clamp(hd + 0.5, 0.0, 1.0);
+    }
+    gl_FragColor = vec4(c * u_dim, al);
 }
 `;
 

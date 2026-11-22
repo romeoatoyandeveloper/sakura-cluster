@@ -559,12 +559,12 @@ class Page {
     /* ---------- Waze map (cluster) ---------- */
     mapTab(cv, bottom) {
         const lw = 820;
-        this.switchRow(cv, X0, CT, lw, 'Show the Waze map in the theme', 'The Sport and M themes open a window in the middle for the map', 'mapInTheme', 66);
+        this.switchRow(cv, X0, CT, lw, 'Show the Waze map in the theme', 'Sport, M and Neon Highway + Map open a window in the middle for the map', 'mapInTheme', 66);
         // live state from waze.js: the map showing, waiting, the Waze app busy, Waze on Cluster missing
         const info = this.hud.waze ? this.hud.waze.info() : { text: 'Not available in this app', up: false, ok: false };
         let st = wazeWords(info.text);
         if (this.get('mapInTheme') && !this.hud.mapLayout && this.hud.activeName !== 'off') {
-            st = ['Only the Sport and M themes can show the map', this.layoutName(this.shownName()) + ' is on now, so Waze stays where it normally is.'];
+            st = ['Only Sport, M and Neon Highway + Map can show the map', this.layoutName(this.shownName()) + ' is on now, so Waze stays where it normally is.'];
         }
         const sy = CT + 82, sh = 72;
         cv.roundRect(X0, sy, lw, sh, 14, C.panel);

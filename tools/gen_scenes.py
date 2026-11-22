@@ -24,8 +24,9 @@ KEEP = [1380, 660, 1460, 720]            # BMW's gear letter in its bottom strip
 
 
 class Layout:
-    def __init__(self, name, title, scene, **kw):
-        self.name, self.title = name, title
+    def __init__(self, name, title, scene, extra=None, **kw):
+        self.name, self.title, self.extra = name, title, extra or {}
+        self.theme = self.extra.pop('theme', None)
         self.w = [dict({'id': 'scene', 'type': 'scene', 'scene': scene, 'class': 'content', 'z': 0, 'x': 0, 'y': 0, 'w': 1920,
                         'h': 720, 'keep': KEEP}, **kw)]
 
@@ -38,7 +39,7 @@ class Layout:
 
     def write(self):
         out = os.path.join(APP, 'hud', 'layouts', self.name + '.json')
-        json.dump({'schemaVersion': 2, 'name': self.title, 'packWaste': 3, 'theme': self.name, 'widgets': self.w},
+        json.dump(dict({'schemaVersion': 2, 'name': self.title, 'packWaste': 3, 'theme': self.theme or self.name}, **self.extra, widgets=self.w),
                   open(out, 'w', encoding='utf8'), indent=2, ensure_ascii=False)
         print('wrote', out, len(self.w), 'widgets')
 
@@ -56,6 +57,20 @@ L.write()
 
 # Neon Highway: as Night Drive (the speed left and the gear right of the sun, Orbitron, chrome figures)
 L = Layout('highway', 'Neon Highway', 'highway')
+L.text('speed_lab', 150, 186, 200, 'SPEED', 'm_label', 'dim')
+L.text('speed_u', 236, 186, 120, '{{u:speedLc}}', 'm_unit', 'dim')
+L.text('clock', 380, 190, 180, '{{time}}', 'm_mid', 'sec', align='right')
+L.text('speed', 150, 318, 410, '{{speed}}', 'm_gear', 'fg', align='right', color2='pink')
+L.text('gear_lab', 1360, 186, 200, 'GEAR', 'm_label', 'dim')
+L.text('out', 1590, 186, 180, '{{ambientN}}{{u:temp}}', 'm_label', 'sec', align='right')
+L.text('gear', 1360, 318, 410, '{{gear}}', 'm_gear', 'fg', align='left', color2='pink')
+L.write()
+
+# Neon Highway + Map: Neon Highway with a window for the Waze map (waze-on-cluster on the "panel" target, the setting
+# "Show the Waze map in the theme"): x 600..1320, y 136..556, inside Sport's proven window and clear of the speed and
+# the gear. The scene sits at z 1, over the map (content z 0); "mapLive": the window opens and closes without a rebuild.
+L = Layout('highway_map', 'Neon Highway + Map', 'highway', extra={'theme': 'highway', 'mapLive': True}, z=1,
+           hole=[600, 136, 720, 420], holeWhen='mapUp', holeInset=10, holeRadius=28)
 L.text('speed_lab', 150, 186, 200, 'SPEED', 'm_label', 'dim')
 L.text('speed_u', 236, 186, 120, '{{u:speedLc}}', 'm_unit', 'dim')
 L.text('clock', 380, 190, 180, '{{time}}', 'm_mid', 'sec', align='right')
