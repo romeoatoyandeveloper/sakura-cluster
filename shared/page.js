@@ -47,7 +47,7 @@ const MODE_KEY = { comfort: 'inComfort', sport: 'inSport', eco: 'inEco' };
 const TAB = {
     readouts: 'Gauges',
     position: 'Position',
-    map: 'Waze map',
+    map: 'Phone map',
     badge: 'Model name',
     alerts: 'Warnings & shift lights',
     gmeter: 'G-meter',
@@ -559,12 +559,12 @@ class Page {
     /* ---------- Waze map (cluster) ---------- */
     mapTab(cv, bottom) {
         const lw = 820;
-        this.switchRow(cv, X0, CT, lw, 'Show the Waze map in the theme', 'Sport, M and Neon Highway + Map open a window in the middle for the map', 'mapInTheme', 66);
+        this.switchRow(cv, X0, CT, lw, 'Show the phone\'s map in the theme', 'Sport, M and Neon Highway + Map open a window in the middle for the map', 'mapInTheme', 66);
         // live state from waze.js: the map showing, waiting, the Waze app busy, Waze on Cluster missing
         const info = this.hud.waze ? this.hud.waze.info() : { text: 'Not available in this app', up: false, ok: false };
         let st = wazeWords(info.text);
         if (this.get('mapInTheme') && !this.hud.mapLayout && this.hud.activeName !== 'off') {
-            st = ['Only Sport, M and Neon Highway + Map can show the map', this.layoutName(this.shownName()) + ' is on now, so Waze stays where it normally is.'];
+            st = ['Only Sport, M and Neon Highway + Map can show the map', this.layoutName(this.shownName()) + ' is on now, so the map stays where it normally is.'];
         }
         const sy = CT + 82, sh = 72;
         cv.roundRect(X0, sy, lw, sh, 14, C.panel);
@@ -576,10 +576,10 @@ class Page {
         cv.text('Good to know', X0, y, 17, C.text, B);
         y += 10;
         [
-            'Other themes leave Waze where it normally is.',
-            'While the map is in the theme, Waze\'s map leaves the HUD. Waze draws one map at a time.',
-            'Needs robertnisipeanu\'s Waze on Cluster app on the car.',
-            'Turning this off gives Waze its usual place back.',
+            'Other themes leave the map where it normally is.',
+            'While the map is in the theme, it leaves the HUD: the phone\'s map shows in one place at a time.',
+            'Needs robertnisipeanu\'s Waze on Cluster app on the car. It shows Google Maps, Waze or Apple Maps from CarPlay, Google Maps from Android Auto.',
+            'Turning this off gives the map its usual place back.',
         ].forEach((t) => {
             wrap(cv, t, 15, lw - 20, L).forEach((ln, j) => {
                 y += 24;
@@ -596,7 +596,7 @@ class Page {
         const mx = rx + rw * 0.33, my = iy + ih * 0.14, mw = rw * 0.34, mh = ih * 0.64;
         cv.roundRect(mx, my, mw, mh, 10, '#0d0d0ef0');
         dashed(cv, mx, my, mw, mh, C.text);
-        cv.text('The Waze map shows here', mx + mw / 2, my + mh / 2 + 6, 16, C.text, { font: 'bold', align: 'center', literal: true });
+        cv.text('The map shows here', mx + mw / 2, my + mh / 2 + 6, 16, C.text, { font: 'bold', align: 'center', literal: true });
         let ny = iy + ih + 24;
         wrap(cv, 'The Sport theme with its map window. M works the same way. When the map goes away, the theme fills back in.', 14, rw, L).forEach((ln) => { cv.text(ln, rx, ny, 14, C.dim, L); ny += 21; });
     }
@@ -828,7 +828,7 @@ class Page {
                 this.confirm = {
                     title: 'Reset everything?',
                     lines: ['Every setting goes back to how the app came: the ' + look + ' for each drive mode, gauges, warnings, shift lights, G-meter' +
-                        (this.cluster() ? ', model name, Waze map' : ', position, colours') + ', units, clock and time zone.', '',
+                        (this.cluster() ? ', model name, phone map' : ', position, colours') + ', units, clock and time zone.', '',
                         this.cluster() ? 'Out of the box, Sport mode shows Track. To see BMW\'s own cluster instead, use "Show BMW\'s own cluster in every mode" on the Theme tab.'
                             : 'Out of the box, Comfort mode shows Daily.'],
                     yes: 'Reset everything', danger: true, run: () => this.resetAll(),
@@ -976,14 +976,14 @@ function wazeWords(t) {
     const W8 = {
         'Waze on Cluster isn\'t running': ['The Waze on Cluster app isn\'t running', 'Open it on the car, then come back. The map appears by itself.'],
         'Waze on Cluster: this car isn\'t supported': ['Waze on Cluster doesn\'t support this car', 'The map can\'t move into the theme here.'],
-        'Waze map is turned off in the Waze app': ['The map is turned off in the Waze app', 'Turn the cluster map on in Waze, then come back.'],
-        'Off. Waze shows the map in BMW\'s own map view': ['Off: Waze shows its map in BMW\'s own map view', 'Turn the switch on to put it inside the Sport or M theme.'],
-        'Waze app is open, retrying': ['The Waze app is open', 'It tries again by itself.'],
+        'Waze map is turned off in the Waze app': ['The map is turned off in the Waze on Cluster app', 'Turn the cluster map on there, then come back.'],
+        'Off. Waze shows the map in BMW\'s own map view': ['Off: the map shows in BMW\'s own map view', 'Turn the switch on to put it inside Sport, M or Neon Highway + Map.'],
+        'Waze app is open, retrying': ['The Waze on Cluster app is open', 'It tries again by itself.'],
         'Moving the map into the theme': ['Moving the map into the theme', 'This takes a moment.'],
         'Map showing in the theme': ['The map is showing in the theme', ''],
         'Map frozen, waiting for the phone': ['The map is frozen, waiting for the phone', 'It comes back when the phone sends the map again.'],
         'Waze on Cluster reports an error': ['Waze on Cluster reports an error', ''],
-        'Waiting for the map': ['Waiting for the map', 'It appears when Waze sends it.'],
+        'Waiting for the map': ['Waiting for the map', 'It appears when the phone sends it.'],
         'Not available in this app': ['Not available in this app', ''],
     };
     if (W8[t]) return W8[t];

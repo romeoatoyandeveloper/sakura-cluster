@@ -2,7 +2,7 @@
 
 <img src="icon.png" width="72" align="left" alt="Cluster Themes icon">
 
-Redraws the whole instrument cluster in a theme of your choice. Open **Cluster Themes** from the apps menu on the center screen: its own page has seven tabs along the top: Theme, Gauges, Model name, Waze map, Warnings & shift lights, G-meter and Settings. Every button says what it does, with a short grey line under it where the name alone isn't enough.
+Redraws the whole instrument cluster in a theme of your choice. Open **Cluster Themes** from the apps menu on the center screen: its own page has seven tabs along the top: Theme, Gauges, Model name, Phone map, Warnings & shift lights, G-meter and Settings. Every button says what it does, with a short grey line under it where the name alone isn't enough.
 
 <p align="center"><img src="../../docs/images/cluster-vfd.png" width="900" alt="VFD theme"></p>
 
@@ -127,6 +127,12 @@ Driving down a neon highway into a striped synthwave sun, between rows of low-po
 
 <p align="center"><img src="../../docs/images/cluster-highway.png" width="900" alt="Neon Highway theme"></p>
 
+### Neon Highway + Map
+
+Neon Highway with a window for your phone's map (Google Maps, Waze or Apple Maps from CarPlay, Google Maps from Android Auto) in the middle of the cluster, between the speed and the gear, in a neon frame from cyan to magenta. The road runs up into the map; the palms, the speed effects and the revs on the road's edges go on round it. In a bend the road banks and curves but the window stays still; braking hard turns the frame red with the scene. With no map showing the window closes and it is plain Neon Highway. Needs robertnisipeanu's Waze on Cluster (patched), the car's Instrument cluster > Central display area on Map view, and **Show the phone's map in the theme** on (Phone map tab).
+
+<p align="center"><img src="../../docs/images/cluster-highway-map.png" width="900" alt="Neon Highway + Map theme (the map in the picture is a stand-in drawn for the bench)"></p>
+
 ### Warp
 
 Stars stream out of the middle: dots when you go slowly, long streaks when you go fast. The revs are a ring round the speed in the middle, and the whole sky flashes at the shift point. The clock and outside temperature are on the left, the gear and drive mode on the right.
@@ -165,7 +171,7 @@ An 80s vacuum-fluorescent dash in three colours at once, like the multi-colour d
 
 Night Drive, Warp, Paper and Light Trails are drawn without pictures, as one shader each; Aurora, Orbital and VFD are built from designs on the app's design canvas. None of the seven is tested on a car yet.
 
-Only Sport and M have a map window; with "Show Waze map inside the theme" on, Waze stays in its usual place while the others show.
+Only Sport, M and Neon Highway + Map have a map window; with "Show the phone's map in the theme" on, the map stays in its usual place while the others show.
 
 More themes are on the way.
 
@@ -183,7 +189,7 @@ The names below are the page's. The kit's own **All settings** list (the SETTING
 
 - **Theme:** one per drive mode, or **One theme for every mode**.
 - **Gauges:** pick which car value each box of M, Track or Retro 80s shows (speed, rpm, boost, temperatures, tyres, fuel, g, power and more). Plug-in hybrids can also show **Hybrid battery**, the high-voltage battery's charge in % (not yet checked on a hybrid). **Put Track's boxes back** (or M's, or Retro 80s') puts that theme's boxes back as they came; it asks first.
-- **Waze map, Show the Waze map in the theme:** Sport and M open a window in the middle and Waze on Cluster draws its map in it, above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, Waze's map on the HUD is off. Needs robertnisipeanu's Waze on Cluster; turning it off gives Waze its usual place back.
+- **Phone map, Show the phone's map in the theme:** Sport, M and Neon Highway + Map open a window in the middle and robertnisipeanu's Waze on Cluster draws the phone's map in it (Google Maps, Waze or Apple Maps from CarPlay, Google Maps from Android Auto), above BMW's own map view, so nothing shows twice. When the map goes away the theme fills back in. While it is on, the map on the HUD is off. Needs Waze on Cluster, patched, and the car's Instrument cluster > Central display area set to Map view; turning it off gives the map its usual place back.
 - **Model name:** your model, like "BMW X3 M40i", as text in the theme's font (Sport and M, where BMW puts its own): 1. the series, 2. your model, **Write "BMW" in front**, or **Show no model name** (the default).
 - **Warnings:** **Oil is hotter than**, **Coolant is hotter than** and **Boost is higher than**. A readout over its limit flashes red (oil 130°C and coolant 115°C by default, boost off). **Put warnings back** returns all three to these, with Undo.
 - **Test the shift lights** (Start test): runs the rpm up to the shift point for about 4 seconds while the car stands.
