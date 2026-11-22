@@ -21,7 +21,9 @@
  * Sound: piped to pacat or aplay when the unit has one (else silent, said in the status).
  * Bluetooth: "pair" looks for a controller in pairing mode for 20 s with bluetoothctl (BlueZ), when the unit has it.
  * Games: /var/opt/psx/games and USB sticks (removable file systems in /proc/mounts), .cue .chd .pbp .iso .img .bin
- * .exe; memory cards in /var/opt/psx/saves; a BIOS in /var/opt/psx/bios if you have one (else the core's own).
+ * .exe; memory cards in /var/opt/psx/saves. BIOS: your PlayStation's (scph1001.bin and the like, 512 KiB) on a USB
+ * stick is copied to /var/opt/psx/bios when the games are listed, and the core then starts with the PlayStation's
+ * startup screen; without one, the core's own (HLE), which goes straight into the game.
  *
  * Plain C, built static (build.sh), so it needs nothing from the head unit's libraries.
  */
@@ -49,7 +51,7 @@
 #include <unistd.h>
 #include "libretro.h"
 
-#define VERSION "0.1.0"
+#define VERSION "0.2.0"
 #define FW 1024
 #define FH 512
 #define SLOT (FW * FH * 4)
@@ -59,6 +61,8 @@
 
 static char RUN[256] = "/dev/shm/psx-core", HOME[256] = "/var/opt/psx";
 static volatile sig_atomic_t quit_now;
+static int restart_now;            /* a BIOS was added: start again, so the core finds it */
+static char **self_argv;
 
 /* ------------------------------------------------------------------ log */
 static void say(const char *fmt, ...) {
@@ -501,7 +505,12 @@ static bool env_cb(unsigned cmd, void *data) {
         case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: ((struct retro_log_callback *)data)->log = core_log; return true;
         case RETRO_ENVIRONMENT_GET_CAN_DUPE: *(bool *)data = true; return true;
         case RETRO_ENVIRONMENT_GET_INPUT_BITMASKS: return true;
-        case RETRO_ENVIRONMENT_GET_VARIABLE: ((struct retro_variable *)data)->value = NULL; return false;
+        case RETRO_ENVIRONMENT_GET_VARIABLE: {
+            struct retro_variable *v = data;
+            v->value = NULL;
+            if (v->key && !strcmp(v->key, "pcsx_rearmed_show_bios_bootlogo")) { v->value = "enabled"; return true; }   /* (real BIOS only) */
+            return false;
+        }
         case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE: *(bool *)data = false; return true;
         case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: {
             const struct retro_system_av_info *av = data;
@@ -624,6 +633,54 @@ static int game_ext(const char *n) {
     return 0;
 }
 
+/* a PlayStation BIOS by its name and size (scph1001.bin, SCPH5501.BIN ...: 512 KiB) */
+static int is_bios(const char *name, off_t size) {
+    return size == 524288 && !strncasecmp(name, "scph", 4) && strlen(name) > 4 && !strcasecmp(name + strlen(name) - 4, ".bin");
+}
+
+/* the BIOS the core will use (the first in /var/opt/psx/bios), or "" */
+static const char *bios_name(void) {
+    static char name[256];
+    char dir[300];
+    snprintf(dir, sizeof dir, "%s/bios", HOME);
+    name[0] = 0;
+    DIR *d = opendir(dir);
+    struct dirent *e;
+    while (d && (e = readdir(d))) {
+        char p[600];
+        struct stat st;
+        snprintf(p, sizeof p, "%s/%s", dir, e->d_name);
+        if (!stat(p, &st) && is_bios(e->d_name, st.st_size)) { snprintf(name, sizeof name, "%s", e->d_name); break; }
+    }
+    if (d) closedir(d);
+    return name;
+}
+
+/* a BIOS found on a USB stick: copied to /var/opt/psx/bios under its lower-case name (the core's) */
+static void bios_take(const char *path, const char *name) {
+    char low[256], dst[600], tmp[610];
+    size_t i;
+    for (i = 0; name[i] && i < sizeof low - 1; i++) low[i] = (name[i] >= 'A' && name[i] <= 'Z') ? name[i] + 32 : name[i];
+    low[i] = 0;
+    snprintf(dst, sizeof dst, "%s/bios/%s", HOME, low);
+    if (!access(dst, F_OK)) return;
+    FILE *in = fopen(path, "rb");
+    if (!in) return;
+    snprintf(tmp, sizeof tmp, "%s.tmp", dst);
+    FILE *out = fopen(tmp, "wb");
+    char buf[65536];
+    size_t n, total = 0;
+    while (out && (n = fread(buf, 1, sizeof buf, in)) > 0) total += fwrite(buf, 1, n, out);
+    fclose(in);
+    if (!out) return;
+    fclose(out);
+    if (total == 524288 && !rename(tmp, dst)) {
+        say("BIOS %s copied from %s: starting again with it", low, path);
+        send_line("{\"ev\":\"message\",\"text\":\"PlayStation BIOS found on the USB stick (%s): the startup screen is on\"}", js(low));
+        restart_now = 1;
+    } else unlink(tmp);
+}
+
 static char list_buf[16000];
 static size_t list_len;
 static int list_n;
@@ -640,6 +697,7 @@ static void list_dir(const char *dir, int depth) {
         struct stat st;
         if (stat(p, &st)) continue;
         if (S_ISDIR(st.st_mode)) { list_dir(p, depth + 1); continue; }
+        if (S_ISREG(st.st_mode) && is_bios(e->d_name, st.st_size)) { bios_take(p, e->d_name); continue; }
         if (!S_ISREG(st.st_mode) || !game_ext(e->d_name)) continue;
         const char *dot = strrchr(e->d_name, '.');
         if (!strcasecmp(dot, ".bin")) {        /* a .bin beside its .cue: the .cue only */
@@ -657,10 +715,37 @@ static void list_dir(const char *dir, int depth) {
     closedir(d);
 }
 
+static void list_add(const char *name, const char *path) {
+    int n = snprintf(list_buf + list_len, sizeof list_buf - list_len, "%s{\"name\":\"%s\",\"path\":\"%s\",\"mb\":0}",
+                     list_n ? "," : "", js(name), js(path));
+    if (n > 0 && (size_t)n < sizeof list_buf - list_len) { list_len += n; list_n++; }
+}
+
+/* the PlayStation's own menu (memory cards, CD player): with a real BIOS, a blank audio CD boots into it */
+static void menu_disc(void) {
+    char bin[300], cue[300];
+    snprintf(bin, sizeof bin, "%s/menu.bin", RUN);
+    snprintf(cue, sizeof cue, "%s/menu.cue", RUN);
+    if (!access(cue, R_OK)) return;
+    FILE *f = fopen(bin, "wb");
+    if (!f) return;
+    static const char zero[2352];
+    for (int i = 0; i < 150; i++) fwrite(zero, 1, sizeof zero, f);   /* 2 s of silence */
+    fclose(f);
+    f = fopen(cue, "w");
+    if (f) { fprintf(f, "FILE \"menu.bin\" BINARY\n  TRACK 01 AUDIO\n    INDEX 01 00:00:00\n"); fclose(f); }
+}
+
 static void list_games(void) {
     char games[300];
     list_len = 0; list_n = 0; list_buf[0] = 0;
     snprintf(games, sizeof games, "%s/games", HOME);
+    if (bios_name()[0]) {
+        char cue[300];
+        menu_disc();
+        snprintf(cue, sizeof cue, "%s/menu.cue", RUN);
+        list_add("PlayStation menu (memory cards, CD player)", cue);
+    }
     /* the test program shipped beside this binary (test/make_test_exe.py): colour bars, to see a picture with no game */
     char self[600] = "";
     ssize_t sl = readlink("/proc/self/exe", self, sizeof self - 20);
@@ -669,14 +754,13 @@ static void list_games(void) {
         char *slash = strrchr(self, '/');
         if (slash) {
             strcpy(slash, "/test.exe");
-            if (!access(self, R_OK)) {
-                list_len += snprintf(list_buf, sizeof list_buf, "{\"name\":\"PS1 test picture (colour bars)\",\"path\":\"%s\",\"mb\":0}", js(self));
-                list_n++;
-            }
+            if (!access(self, R_OK)) list_add("PS1 test picture (colour bars)", self);
         }
     }
     list_dir(games, 0);
-    /* USB sticks: removable file systems */
+    /* USB sticks: removable file systems (tests: PSX_TEST_USB, a folder taken for one) */
+    const char *tu = getenv("PSX_TEST_USB");
+    if (tu) list_dir(tu, 0);
     FILE *m = fopen("/proc/mounts", "r");
     char dev[256], mnt[512], fs[64];
     while (m && fscanf(m, "%255s %511s %63s %*[^\n]", dev, mnt, fs) == 3) {
@@ -787,10 +871,10 @@ static void status(void) {
     const char *bt = find_prog("bluetoothctl");
     send_line("{\"ev\":\"status\",\"version\":\"%s\",\"running\":%s,\"paused\":%s,\"game\":\"%s\",\"fps\":%.2f,\"pads\":[%s],"
               "\"sound\":{\"player\":\"%s\",\"state\":\"%s\",\"pacat\":%s,\"aplay\":%s},"
-              "\"bt\":{\"adapters\":%d,\"bluez\":%s,\"bluetoothctl\":%s,\"pairing\":%s},\"home\":\"%s\"}",
+              "\"bt\":{\"adapters\":%d,\"bluez\":%s,\"bluetoothctl\":%s,\"pairing\":%s},\"bios\":\"%s\",\"home\":\"%s\"}",
               VERSION, running ? "true" : "false", paused ? "true" : "false", js(game_name), fps, padj,
               js(snd_name), js(snd_state), find_prog("pacat") ? "true" : "false", find_prog("aplay") ? "true" : "false",
-              hci, bluez ? "true" : "false", bt ? "true" : "false", pair_pid > 0 ? "true" : "false", js(HOME));
+              hci, bluez ? "true" : "false", bt ? "true" : "false", pair_pid > 0 ? "true" : "false", js(bios_name()), js(HOME));
 }
 
 /* ------------------------------------------------------------------ commands */
@@ -818,6 +902,7 @@ int main(int argc, char **argv) {
     if ((e = getenv("PSX_RUN"))) snprintf(RUN, sizeof RUN, "%s", e);
     if ((e = getenv("PSX_HOME"))) snprintf(HOME, sizeof HOME, "%s", e);
     if (argc > 1 && !strcmp(argv[1], "--version")) { printf("psx-core %s\n", VERSION); return 0; }
+    self_argv = argv;
     signal(SIGPIPE, SIG_IGN);
     signal(SIGTERM, on_signal);
     signal(SIGINT, on_signal);
@@ -849,6 +934,15 @@ int main(int argc, char **argv) {
     double next = now_s(), last_scan = 0, last_card = 0;
     uint32_t last_menu_bits = 0;
     while (!quit_now) {
+        if (restart_now && !running) {        /* the core scans the BIOS folder only when it starts */
+            retro_deinit();
+            snd_stop();
+            say("starting again (a BIOS was added)");
+            execv("/proc/self/exe", self_argv);
+            say("could not start again: %s", strerror(errno));
+            restart_now = 0;
+            retro_init();
+        }
         double t = now_s();
         if (t - last_scan > 2.0) { last_scan = t; scan_pads(); snd_reap(); pair_reap(); }
         if (running && t - last_card > 5.0) { last_card = t; card_save(0); }

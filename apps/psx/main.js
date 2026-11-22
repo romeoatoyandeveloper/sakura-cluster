@@ -221,7 +221,7 @@ class Psx {
             [
                 'Put your game files (.cue with its .bin, .chd, .pbp, .iso) on a USB stick, in any folder,',
                 'or copy them to ' + ((this.games && this.games.dir) || '/var/opt/psx/games') + ' on the head unit.',
-                'A copy of your own disc: PSX can\'t download games. The core has a built-in BIOS; your own (scph1001.bin) in /var/opt/psx/bios helps some games.',
+                'A copy of your own disc: PSX can\'t download games. Your PlayStation\'s BIOS (SCPH1001.BIN) on the stick gives the startup screen.',
             ].forEach((t, i) => cv.text(t, X0, CT + 92 + i * 30, 16, i === 2 ? C.dim : C.text, L));
             pill(cv, X0, CT + 200, 220, 46, 'Look again', 'outline', () => this.send('list'), 'rescan');
             return;
@@ -266,11 +266,15 @@ class Psx {
         wrap(cv, snd.state || '', 15, colW).forEach((t, i) => cv.text(t, xr, y + 62 + i * 22, 15, C.dim, L));
         pill(cv, xr, y + 108, 200, 46, 'Test sound', 'outline', () => this.send('tone'), 'tone');
         if (this.sel === 1) cv.strokeRoundRect(xr - 4, y + 104, 208, 54, 27, 2, C.blue);
-        if (this.toneText) wrap(cv, this.toneText.text, 15, colW).forEach((t, i) => cv.text(t, xr, y + 180 + i * 22, 15, this.toneText.color, L));
-        y = CT + 262;
+        if (this.toneText) wrap(cv, this.toneText.text, 14, colW - 230).forEach((t, i) => cv.text(t, xr + 224, y + 124 + i * 20, 14, this.toneText.color, L));
+        y = CT + 214;
         head('Bluetooth', xr, y);
         cv.text((bt.adapters || 0) + ' adapter' + (bt.adapters === 1 ? '' : 's') + ', BlueZ ' + (bt.bluez ? 'running' : 'not found') + ', bluetoothctl ' + (bt.bluetoothctl ? 'yes' : 'no'), xr, y + 30, 15, C.text, L);
-        cv.text('psx-core ' + (st.version || '?') + (this.parked.speed() !== null ? '   speed ' + Math.round(this.parked.speed()) + ' km/h' : ''), xr, y + 58, 14, C.dim, L);
+        y += 86;
+        head('BIOS', xr, y);
+        cv.text(st.bios ? st.bios.toUpperCase() + ': the PlayStation startup screen is on' : 'Built in: games start straight away, no startup screen', xr, y + 30, 15, st.bios ? C.green : C.text, L);
+        if (!st.bios) cv.text('Your PlayStation\'s BIOS (SCPH1001.BIN or similar) on the USB stick is picked up by itself.', xr, y + 54, 14, C.dim, L);
+        cv.text('psx-core ' + (st.version || '?') + (this.parked.speed() !== null ? '   speed ' + Math.round(this.parked.speed()) + ' km/h' : ''), xr, y + 84, 14, C.dim, L);
     }
 
     gameView(cv) {

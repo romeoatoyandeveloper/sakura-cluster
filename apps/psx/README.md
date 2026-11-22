@@ -17,6 +17,8 @@ It needs **psx-core**, the emulator, from the Store as well (a background tool: 
    - **Sound:** tap **Test sound**.
 3. **Games:** your own copies, on a USB stick in any folder (`.cue` with its `.bin`, `.chd`, `.pbp`, `.iso`), or in
    `/var/opt/psx/games`. **PS1 test picture** is always there, to try the screen and the controller.
+4. **The PlayStation startup screen:** put your console's BIOS (`SCPH1001.BIN` or similar) on the stick too. PSX picks
+   it up by itself; games then start with the Sony intro, and **PlayStation menu** (memory cards, CD player) is listed.
 
 Not yet tested on a car: whether the car's Bluetooth pairs a game controller, and whether the head unit lets an app's
 sound out, are the two open questions; the check page answers both.

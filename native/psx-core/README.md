@@ -13,8 +13,11 @@ the head unit).
 - **Games** from `/var/opt/psx/games` and from USB sticks (any removable FAT / exFAT / NTFS file system, up to three
   folders deep): `.cue` (with its `.bin`), `.chd`, `.pbp`, `.iso`, `.img`, `.bin`, `.exe`, `.m3u`. Your own copies:
   it downloads nothing. A built-in test picture (`test.exe`, colour bars) is listed too.
-- **BIOS:** the core's own (HLE) is built in; your PlayStation's (`scph1001.bin` and the like) in `/var/opt/psx/bios`
-  helps some games. **Memory cards** in `/var/opt/psx/saves`, saved every few seconds and when a game stops.
+- **BIOS:** your PlayStation's (`SCPH1001.BIN` and the like, 512 KiB) anywhere on the USB stick is copied to
+  `/var/opt/psx/bios` when the games are listed; psx-core then starts again with it, games start with the PlayStation's
+  startup screen, and **PlayStation menu** (the console's own memory card and CD player screens, booted from a blank
+  audio disc it makes) is listed first. Without one the core's own (HLE) BIOS is used: games start straight away.
+  Sony's BIOS is not included: it comes from your own console. **Memory cards** in `/var/opt/psx/saves`, saved every few seconds and when a game stops.
 - **Controllers:** a PS4 (DualShock 4) or PS5 (DualSense), over USB or Bluetooth, players 1 and 2 in the order they
   connect. Through the kernel's gamepad driver when the head unit has one, else straight from the controller's own
   reports (`/dev/hidraw`), so no driver is needed. The left stick works as the d-pad too; the PS button opens the
