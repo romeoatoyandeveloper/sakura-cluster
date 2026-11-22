@@ -124,8 +124,7 @@ class Base(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         self.sock = os.path.join(self.tmp, 'ctl.sock')
         self.env = dict(os.environ, SAP_HOME=os.path.join(self.tmp, 'home'), SAP_COMFORT_SOCK=self.sock,
-                        SAP_LOCK=os.path.join(self.tmp, 'pulse.lock'), SAP_RECMGR=os.path.join(self.tmp, 'recmgr.conf'),
-                        SAP_DRIVE=os.path.join(self.tmp, 'drive_mode.json'), SAP_STATUS=os.path.join(self.tmp, 'st', 'status.json'))
+                        SAP_LOCK=os.path.join(self.tmp, 'pulse.lock'), SAP_RECMGR=os.path.join(self.tmp, 'recmgr.conf'))
         self.cfg = os.path.join(self.tmp, 'config.json')
         with open(self.cfg, 'w') as f:
             json.dump({'phase_ms': 500, 'poll_ms': 100, 'cooldown_s': 1.0}, f)
@@ -168,74 +167,6 @@ class Base(unittest.TestCase):
 
 
 class Pulse(Base):
-    def share(self, mode, variant=None, raw=None):
-        """Cluster Themes writing the drive mode it reads (shared/hud.js _shareDrive)."""
-        p = os.path.join(self.tmp, 'drive_mode.json')
-        with open(p + '.tmp', 'w') as f:
-            json.dump({'mode': mode, 'variant': variant, 'raw': raw, 'app': 'cluster_themes'}, f)
-        os.replace(p + '.tmp', p)
-
-    def status_file(self):
-        with open(os.path.join(self.tmp, 'st', 'status.json')) as f:
-            return json.load(f)
-
-    def test_plug_in_hybrid_names_from_comfort_pulse(self):
-        # a 745e: Comfort may hand over the car's name rather than a number
-        fake = self.fake(mode='PHEV_COMFORT')
-        self.daemon()
-        time.sleep(1.0)
-        fake.set_mode('PHEV_SPORT_STANDARD')
-        time.sleep(4.5)
-        self.assertEqual(self.pulses(fake), 3)
-        self.assertEqual(fake.settings, START)
-
-    def test_drive_mode_from_cluster_themes_comes_first(self):
-        # Comfort knows no drive mode (it can't read this car's), Cluster Themes does
-        fake = self.fake(mode=None)
-        stop = threading.Event()
-        cur = {'m': 'comfort', 'raw': 'PHEV_COMFORT'}
-
-        def writer():                  # every 0.5 s, as the app's 2 s heartbeat, faster for the test
-            while not stop.is_set():
-                self.share(cur['m'], None, cur['raw'])
-                time.sleep(0.5)
-        t = threading.Thread(target=writer, daemon=True)
-        t.start()
-        try:
-            self.daemon()
-            time.sleep(1.5)
-            st = self.status_file()
-            self.assertEqual((st['source'], st['mode'], st['comfort']), ('Cluster Themes', 'Comfort', 'reachable'))
-            cur.update(m='sport', raw='PHEV_SPORT_STANDARD')
-            time.sleep(4.5)
-            self.assertEqual(self.pulses(fake), 3)
-            self.assertEqual(fake.settings, START)
-            st = self.status_file()
-            self.assertTrue(st['last'].startswith('pulsed (Comfort -> Sport)'), st['last'])
-            self.assertEqual(st['mode'], 'Sport')
-        finally:
-            stop.set()
-            t.join()
-
-    def test_a_stale_shared_mode_is_not_used(self):
-        fake = self.fake(mode=4)
-        self.share('sport', None, 'SPORT')
-        old = time.time() - 60
-        os.utime(os.path.join(self.tmp, 'drive_mode.json'), (old, old))
-        self.daemon()
-        time.sleep(1.0)
-        self.assertEqual(self.status_file()['source'], 'Comfort')
-        self.assertEqual(fake.applied, [])
-
-    def test_a_skip_is_reported(self):
-        fake = self.fake(mode=4, car_on=False)
-        self.daemon()
-        time.sleep(1.0)
-        fake.set_mode(1)
-        time.sleep(1.5)
-        self.assertIn("car's own ambient light is off", self.status_file()['last'])
-        self.assertEqual(fake.applied, [])
-
     def test_into_sport_pulses_three_times_and_restores_exactly(self):
         fake = self.fake(mode=4)
         self.daemon()

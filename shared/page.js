@@ -22,7 +22,6 @@
  * Theme pictures: previews.js (shot on the bench by tools/previews.py; the centre screen can't draw our
  * cluster-render themes live). Plain Node 8 (the car's 8.16.2).
  */
-const fs = require('fs');
 const G = require('./kit/gauges');
 const themes = require('./kit/themes');
 const previews = require('./previews');
@@ -791,8 +790,7 @@ class Page {
         const rest = keys.filter((k) => !SETTING_GROUPS.some((g) => g[1].indexOf(k) >= 0));
         groups[2][1] = groups[2][1].concat(rest);
         const left = [groups[0], groups[1]].filter((g) => g[1].length);
-        const help = (this.cluster() && this.pulseInfo().installed ? ['@pulse'] : []).concat(['@details', '@reset']);
-        const right = [groups[2]].filter((g) => g[1].length).concat([['Help and reset', help]]);
+        const right = [groups[2]].filter((g) => g[1].length).concat([['Help and reset', ['@details', '@reset']]]);
         const rowsOf = (col) => col.reduce((n, g) => n + g[1].length, 0);
         const headH = 32, maxRows = Math.max(rowsOf(left), rowsOf(right)), maxHeads = Math.max(left.length, right.length);
         const rh = Math.max(38, Math.min(56, Math.floor((bottom - CT - maxHeads * headH - 4) / maxRows)));
@@ -824,14 +822,6 @@ class Page {
             }, 'details');
             return y + h;
         }
-        if (k === '@pulse') {
-            const pi = this.pulseInfo();
-            this.actionRow(cv, x, y, w, h, 'Sport ambient pulse', pi.line, 'Details', false, () => {
-                this.confirm = { title: 'Sport ambient pulse', lines: this.pulseInfo().lines, no: 'Close' };
-                this.kick();
-            }, 'pulse');
-            return y + h;
-        }
         if (k === '@reset') {
             this.actionRow(cv, x, y, w, h, 'Reset everything', 'Every setting back to how the app came', 'Reset...', true, () => {
                 const look = this.cluster() ? 'theme' : 'layout';
@@ -851,44 +841,6 @@ class Page {
         if (s.type === 'bool') return this.switchRow(cv, x, y, w, l[0], sub, k, h);
         if (s.type === 'number') return this.stepRow(cv, x, y, w, l[0], sub, k, h, 220);
         return this.pickRow(cv, x, y, w, l[0], sub, k, null, h);
-    }
-    /**
-     * The Sport ambient pulse tool (native/sport-ambient-pulse, a Store tool), if installed: what its status file
-     * (/dev/shm/sport-ambient-pulse/status.json, written every 2 s while it runs, from 1.1.0) says, read once a second
-     * at most. { installed, line: the row's grey line, lines: the Details dialog }.
-     */
-    pulseInfo() {
-        const now = Date.now();
-        if (this.pulseCache && now - this.pulseCache.t < 1000) return this.pulseCache.v;
-        const home = process.env.SAP_HOME || '/var/opt/sport-ambient-pulse', file = process.env.SAP_STATUS || '/dev/shm/sport-ambient-pulse/status.json';
-        let installed = false, st = null, age = null;
-        try { installed = fs.existsSync(home + '/current/sport_ambient_pulse.py'); } catch (e) { /* no */ }
-        try {
-            age = (now - fs.statSync(file).mtime.getTime()) / 1000;
-            st = JSON.parse(fs.readFileSync(file, 'utf8'));
-            installed = true;
-        } catch (e) { st = null; }
-        const ago = (t) => { const a = Math.max(0, Math.round(now / 1000 - t)); return a < 60 ? a + ' s ago' : a < 3600 ? Math.round(a / 60) + ' min ago' : Math.round(a / 3600) + ' h ago'; };
-        let line, lines;
-        if (!st || age > 10 || st.comfort === null && st.last === 'stopped') {
-            line = st && st.version ? 'Not running now' : 'Installed, not running yet';
-            lines = [line + '.', '', 'It starts with the head unit: after installing or updating it in the Store, restart the head unit once.',
-                'It needs IterioDev\'s Ambient Light app (its Comfort tool drives the lights).'];
-        } else if (st.comfort !== 'reachable') {
-            line = 'Running, waiting for Comfort (Ambient Light app)';
-            lines = ['Running (' + (st.version || '?') + '), but it can\'t reach the Comfort tool: ' + (st.comfort || 'not yet') + '.', '',
-                'Install IterioDev\'s Ambient Light app from the Store, or restart the head unit if it is installed.'];
-        } else {
-            const sees = st.mode ? 'sees ' + st.mode + (st.source ? ' (from ' + st.source + ')' : '') : 'sees no drive mode yet';
-            line = 'Running, ' + sees + (st.last ? '; last: ' + st.last.replace(/ \(.*\)$/, '') : '');
-            lines = ['Running (' + (st.version || '?') + '), Comfort reachable.',
-                'Drive mode it sees: ' + (st.mode || 'none yet') + (st.source ? ', from ' + st.source : ''),
-                'Last: ' + (st.last ? st.last + (st.lastAt ? ', ' + ago(st.lastAt) : '') : 'nothing yet (it pulses when you press SPORT)'), '',
-                'It pulses when the drive mode goes into Sport from another mode, with the car\'s own ambient light on.'];
-        }
-        const v = { installed, line, lines };
-        this.pulseCache = { t: now, v };
-        return v;
     }
     /** "Reset everything": every setting to its app.json default, every readout box back to its own */
     resetAll() {
