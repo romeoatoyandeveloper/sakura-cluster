@@ -15,7 +15,7 @@ allows using it as installed, not building on its code.
 
 | | What happens on the car | How this tool gets it |
 |---|---|---|
-| **Drive mode** | Comfort subscribes to FES, SOME/IP service `0xB50D` (`de.bmw.infotainment.drivingexcitement.FES`), event `0x8025`, and reads its getter once a second | `state.ambient.mode` in Comfort's state: `1` Sport, `2` Sport Plus, `3` Sport Individual, `4`-`6` Comfort (Plus, Individual), `7`-`9` Eco Pro (Plus, Individual), `10` Adaptive. Read about twice a second |
+| **Drive mode** | Comfort subscribes to FES, SOME/IP service `0xB50D` (`de.bmw.infotainment.drivingexcitement.FES`), event `0x8025`, and reads its getter once a second | **From 1.1.0, first:** the drive mode **Cluster Themes** (0.22.6 or later, or HUD Widgets 0.16.6) reads, which it writes to `/dev/shm/sakura-cluster/drive_mode.json` every 2 s. Those apps read a plug-in hybrid's drive mode (`PHEV_SPORT_STANDARD` and the like); on a 745e Comfort's alone gave no pulse. **Else** `state.ambient.mode` in Comfort's state: `1` Sport, `2` Sport Plus, `3` Sport Individual, `4`-`6` Comfort (Plus, Individual), `7`-`9` Eco Pro (Plus, Individual), `10` Adaptive, or a name (`PHEV_` read too). Read about twice a second |
 | **Ambient light** | Comfort writes each light module through the body controller: UDS `2E DA5E` (LIN 1) / `2E E3D1` (LIN 2) to the BDC (`0x40`) via the head unit's diagnostic gateway: module, on, brightness 0-100, R, G, B, **hold time ≤ 254 s**. The module shows that colour for the hold time, then the car's own colour again; "off" gives the car's colour at once | `{"op":"ambient","settings":{"on","rgb","bright","follow","zones","modes"}}` on the socket; the light's settings now are `state.ambient.settings` |
 
 **Runtime only:** those writes are not coding. Each one runs out by itself within 254 s, Comfort hands the lights back
@@ -55,6 +55,10 @@ is the new starting point, and nothing new starts for `cooldown_s` (3 s). One pu
 **Restore guaranteed:** the `finally` covers errors and SIGTERM (systemd stop, `Ctrl-C`). A pulse cut short by a crash
 or power loss is put right at the next start from `pending.json`. If Comfort was killed meanwhile, the hold time
 still returns the modules to the car's colour within 254 s.
+
+**Checking it from the car:** Cluster Themes (0.22.6 or later) has a **Sport ambient pulse** row on its Settings tab
+(Help and reset): running or not, which drive mode it sees and from where, and what it did last (pulsed, or skipped and
+why). It reads `/dev/shm/sport-ambient-pulse/status.json`, which this writes every 2 s and at each change.
 
 **When it doesn't pulse:** with the car's own ambient light off (Comfort lights nothing then), and when Comfort has
 found no light modules on the car. Both are logged.

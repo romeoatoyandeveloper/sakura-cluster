@@ -4,6 +4,11 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 22 2026
 
+- **Sport ambient pulse 1.1.0, Cluster Themes 0.22.6, HUD Widgets 0.16.6: the pulse works on plug-in hybrids, and shows what it is doing.**
+  - **Fixed: on a 745e the ambient light never pulsed.** The pulse tool took the drive mode only from IterioDev's Comfort tool, which doesn't read a plug-in hybrid's drive mode (the car sends it with PHEV_ in front). Cluster Themes and HUD Widgets read it since 0.22.3 / 0.16.3 and now hand it to the pulse tool (a small file, rewritten every 2 s while they run); the pulse tool takes that one first, and also reads PHEV_ names from Comfort itself.
+  - **Cluster Themes, Settings tab, Sport ambient pulse** (with the tool installed): whether it runs, which drive mode it sees and from where, and what it did last: pulsed, or skipped and why (the car's ambient light off, the Ambient config app holding the lights, no light modules found). **Details** says more.
+  - Update both in the Store, then restart the head unit once (the tool starts with the head unit).
+  - Tested on the bench end to end (Cluster Themes' drive mode into the real pulse tool, with a stand-in Comfort that knows no drive mode: three pulses, the light put back); not yet on a car.
 - **Cluster Themes 0.22.5, HUD Widgets 0.16.5:**
   - **New theme: Neon Highway + Map.** Neon Highway with a window for your phone's map in the middle of the cluster, between the speed and the gear, in a neon frame from cyan to magenta. The road runs up into the map; the palms, the speed effects and the revs go on round it; in a bend the road banks but the window stays still; braking hard turns the frame red. With no map the window closes and it is plain Neon Highway. Needs robertnisipeanu's Waze on Cluster (patched), Instrument cluster > Central display area on Map view, and the switch below on.
   - **Waze map is now Phone map** on the page, with **Show the phone's map in the theme**: the map can be Google Maps, Waze or Apple Maps from CarPlay, or Google Maps from Android Auto (Waze on Cluster shows whichever the phone sends). Same setting as before, nothing to set again.

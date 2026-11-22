@@ -996,6 +996,7 @@ class HudApp {
             if (this.client.ready) this.client.status();      // the scene ids (scenesApart) can change: guard, update
         }), 60000);
         this.statusTimer = setInterval(() => this._guard('status', () => this._status()), 5000);
+        this.shareTimer = setInterval(() => this._guard('drive mode share', () => this._shareDrive()), 2000);
         if (this.target === 'hud') this.claimTimer = setInterval(() => this._guard('hud claim', () => this._hudClaim()), CLAIM_MS);
         this._status();
         this._startDme();
@@ -1075,6 +1076,7 @@ class HudApp {
         clearInterval(this.statusTimer);
         clearInterval(this.dmeTimer);
         clearInterval(this.claimTimer);
+        clearInterval(this.shareTimer);
         clearTimeout(this.statusAskT);
         clearTimeout(this.diagTimer); this.diagTimer = null;
         this.vstate.stop();
@@ -1356,11 +1358,36 @@ class HudApp {
      */
     /** A drive mode from the car (FES, or M Drive on M cars): the layout for it, or the status line. */
     _driveMode(m, variant, raw) {
+        // the car's drive mode for other tools on the head unit (the Sport ambient pulse): never the demo show's
+        const was = this.carDrive;
+        this.carDrive = { mode: m, variant: variant || null, raw: raw === undefined ? null : raw };
+        if (!was || was.mode !== m || was.variant !== this.carDrive.variant) this._shareDrive();
         if (this.demoKeep) { this.demoKeep.mode = m; this.demoKeep.variant = variant; return; }   // the demo show has the mode; kept for after
         if (m === this.driveMode && variant === this.driveVariant) return;
         this.log.info('drive mode ' + MODE_NAME[m] + (variant ? ' ' + variant : '') + ' (' + raw + ')');
         this.driveMode = m; this.driveVariant = variant;
         if (this._layoutName() !== this.activeName) this._rebuild(); else this._status();
+    }
+
+    /**
+     * The drive mode the car reports (as _driveMode has it, a plug-in hybrid's PHEV_ names read), for other tools on
+     * the head unit: /dev/shm/sakura-cluster/drive_mode.json { mode: 'sport' | 'comfort' | 'eco', variant: 'plus' |
+     * 'individual' | null, raw, app }, written at a change and every 2 s (its age says this app still runs), by
+     * rename, readable by all. The Sport ambient pulse (native/sport-ambient-pulse 1.1.0) takes its drive mode from it.
+     * A failure is logged once and never stops anything.
+     */
+    _shareDrive() {
+        const d = this.carDrive;
+        if (!d) return;
+        const file = process.env.SAKURA_DRIVE_SHARE || '/dev/shm/sakura-cluster/drive_mode.json', dir = path.dirname(file);
+        try {
+            try { fs.mkdirSync(dir, 0o755); } catch (e) { if (e.code !== 'EEXIST') throw e; }
+            const tmp = file + '.' + process.pid + '.tmp';
+            fs.writeFileSync(tmp, JSON.stringify({ mode: d.mode, variant: d.variant, raw: d.raw, app: this.ctx.spec && this.ctx.spec.id || null }) + '\n', { mode: 0o644 });
+            fs.renameSync(tmp, file);
+        } catch (e) {
+            if (!this.shareErr) { this.shareErr = true; this.log.warn('drive mode not shared with other tools (' + file + '): ' + e.message); }
+        }
     }
 
     _diag(name, v, drop) {

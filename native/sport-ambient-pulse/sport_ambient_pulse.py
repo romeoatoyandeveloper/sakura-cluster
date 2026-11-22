@@ -9,7 +9,10 @@ every change):
 
   drive mode  Comfort reads FES (SOME/IP service 0xB50D, event 0x8025, and its getter once a second) and keeps it in
               its state as ambient.mode: 1 Sport, 2 Sport Plus, 3 Sport Individual, 4 to 6 Comfort (Plus,
-              Individual), 7 to 9 Eco Pro (Plus, Individual), 10 Adaptive.
+              Individual), 7 to 9 Eco Pro (Plus, Individual), 10 Adaptive; a name is read too (a plug-in hybrid's
+              start with PHEV_: PHEV_SPORT_STANDARD). Since 1.1.0 the drive mode Cluster Themes (or HUD Widgets)
+              reads comes first when it is there: those apps write it to /dev/shm/sakura-cluster/drive_mode.json
+              every 2 s, and they read a plug-in hybrid's drive mode, which Comfort may not (a 745e's did nothing).
   light       {"op": "ambient", "settings": {on, rgb, bright 5-100, follow, zones, modes}}. Comfort writes each light
               module through the body controller (UDS 2E DA5E / E3D1 to the BDC, via the head unit's diagnostic
               gateway) with a hold time of at most 254 s, after which the module shows the car's own colour again.
@@ -29,6 +32,9 @@ client leaves, and a connection kept open would stop that from working.
   sport_ambient_pulse.py --status        what Comfort reports, and anything that would stop a pulse
   sport_ambient_pulse.py --restore       put back the settings of a pulse left half done
   sport_ambient_pulse.py --self-test     offline checks
+
+What it is doing goes to /dev/shm/sport-ambient-pulse/status.json (every 2 s and at each change), which Cluster Themes
+shows on its Settings tab, so it can be checked from the car's screen.
 """
 import argparse
 import copy
@@ -37,6 +43,7 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -44,12 +51,17 @@ import sys
 import time
 
 ID = 'sport-ambient-pulse'
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 HOME = os.environ.get('SAP_HOME', '/var/opt/' + ID)
 SOCK = os.environ.get('SAP_COMFORT_SOCK', '/run/iteriodev-comfort/ctl.sock')
 LOCK = os.environ.get('SAP_LOCK', '/run/' + ID + '.lock')
 RECMGR = os.environ.get('SAP_RECMGR', '/etc/recmgr-restartlist.conf')
 MARKER = os.path.join(HOME, 'pending.json')
+# the drive mode Cluster Themes / HUD Widgets read (rewritten every 2 s while one runs; older than DRIVE_FRESH_S: gone)
+DRIVE = os.environ.get('SAP_DRIVE', '/dev/shm/sakura-cluster/drive_mode.json')
+DRIVE_FRESH_S = 8.0
+# what this is doing, for Cluster Themes' Settings tab
+STATUS = os.environ.get('SAP_STATUS', '/dev/shm/' + ID + '/status.json')
 
 MODES = {1: 'Sport', 2: 'Sport Plus', 3: 'Sport Individual', 4: 'Comfort', 5: 'Comfort Plus', 6: 'Comfort Individual',
          7: 'Eco Pro', 8: 'Eco Pro Plus', 9: 'Eco Pro Individual', 10: 'Adaptive'}
@@ -339,20 +351,24 @@ def pulse(cfg, reason):
     with PulseLock() as lock:
         if not lock.held:
             log.info('pulse (%s) skipped: another one is running', reason)
+            last('skipped: another pulse was running')
             return False
         amb = ambient_of(read_state())
         snap = copy.deepcopy(amb['settings'])
         if amb.get('carOn') is not True:
             log.warning("pulse (%s) skipped: the car's own ambient light is off, and Comfort lights nothing then", reason)
+            last("skipped: the car's own ambient light is off (car settings)")
             return False
         if not amb.get('modules'):
             log.warning('pulse (%s) skipped: Comfort has found no ambient light modules on this car', reason)
+            last('skipped: Comfort found no ambient light modules')
             return False
         comfort_lights = snap.get('on') is True or (snap.get('modes') or {}).get('on') is True
         if not comfort_lights and ambient_config_pids():
             if cfg['when_ambient_config'] == 'skip':
                 log.warning('pulse (%s) skipped: the Ambient config app is running and writes the lights itself '
                             '(when_ambient_config: "pulse" pulses anyway)', reason)
+                last("skipped: the Ambient config app has the lights (turn on Ambient Light's own colour)")
                 return False
             log.warning('the Ambient config app is running too: its colour may cut into the pulse')
         write_marker(snap, reason)
@@ -374,11 +390,82 @@ def pulse(cfg, reason):
             RUN['pulsing'] = False
             if session:
                 session.close()
-            restore(snap)
+            back = restore(snap)
+            last('pulsed (%s)%s' % (reason, '' if back else ', the light NOT put back yet'))
         return True
 
 
 # ---- the service --------------------------------------------------------------------------------------------------
+
+def mode_number(v):
+    """A drive mode as Comfort's numbers (1 Sport .. 10 Adaptive) from a number or a name: SPORT, SPORT_PLUS,
+    COMFORT_INDIVIDUAL, ECO_PRO..., a plug-in hybrid's with PHEV_ in front (PHEV_SPORT_STANDARD); None if unknown."""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, str) and v.strip().isdigit():
+        v = int(v.strip())
+    if isinstance(v, int):
+        return v if 1 <= v <= 10 else None
+    if not isinstance(v, str):
+        return None
+    u = re.sub(r'^(PHEV|HEV|HYBRID)_', '', v.strip().upper())
+    extra = 1 if re.search(r'PLUS|EXPERT', u) else 2 if 'INDIVID' in u else 0
+    if u.startswith('SPORT'):
+        return 1 + extra
+    if u.startswith('COMFORT'):
+        return 4 + extra
+    if u.startswith('ECO') or u.startswith('EFFICIEN'):
+        return 7 + extra
+    if u.startswith('ADAPTIVE'):
+        return 10
+    return None
+
+
+def shared_mode():
+    """(Comfort's number, the car's value) from Cluster Themes' drive_mode.json while it is fresh, else None."""
+    try:
+        if time.time() - os.stat(DRIVE).st_mtime > DRIVE_FRESH_S:
+            return None
+        with open(DRIVE) as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return None
+    base = {'sport': 1, 'comfort': 4, 'eco': 7}.get(d.get('mode')) if isinstance(d, dict) else None
+    if base is None:
+        return None
+    return base + {'plus': 1, 'individual': 2}.get(d.get('variant'), 0), d.get('raw')
+
+
+ST = {'version': VERSION, 'comfort': None, 'mode': None, 'source': None, 'last': None, 'lastAt': None}
+_st_written = [0.0, None]
+
+
+def report(force=False, **kw):
+    """Update what this is doing and write it for Cluster Themes (at most every 2 s unless something changed)."""
+    ST.update(kw)
+    ST['at'] = time.time()
+    key = json.dumps({k: v for k, v in ST.items() if k != 'at'}, sort_keys=True)
+    if not force and key == _st_written[1] and time.monotonic() - _st_written[0] < 2.0:
+        return
+    try:
+        d = os.path.dirname(STATUS)
+        os.makedirs(d, exist_ok=True)
+        os.chmod(d, 0o755)
+        tmp = STATUS + '.tmp'
+        with open(tmp, 'w') as f:
+            json.dump(ST, f)
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, STATUS)
+        _st_written[0], _st_written[1] = time.monotonic(), key
+    except OSError as e:
+        if _st_written[1] != 'error':
+            log.warning('status for Cluster Themes not written: %s', e)
+            _st_written[1] = 'error'
+
+
+def last(text):
+    report(force=True, last=text, lastAt=time.time())
+
 
 def name(mode):
     return MODES.get(mode, 'mode %s' % mode) if mode is not None else 'unknown'
@@ -390,6 +477,8 @@ def daemon(cfg):
     log.info('%s %s: Sport is %s; %d pulses of %s, %d ms a phase', ID, VERSION,
              ', '.join(name(m) for m in sorted(sport)), cfg['pulses'], cfg['rgb'], cfg['phase_ms'])
     prev = None                  # the last drive mode known (a gap in Comfort's news keeps it)
+    source = None                # where the drive mode comes from: 'Cluster Themes' or 'Comfort'
+    report(force=True, comfort=None, mode=None, source=None)
     quiet_until = 0.0            # no new pulse before this (monotonic)
     reachable = None
     retry_marker_at = 0.0
@@ -403,7 +492,7 @@ def daemon(cfg):
             time.sleep(poll)
             continue
         try:
-            mode = ambient_of(read_state()).get('mode')
+            cmode = ambient_of(read_state()).get('mode')
             if reachable is not True:
                 log.info('Comfort reachable')
             reachable = True
@@ -411,8 +500,17 @@ def daemon(cfg):
             if reachable is not False:
                 log.warning('%s; waiting for it', e)
             reachable = False
+            report(comfort=str(e))
             time.sleep(max(poll, 2.0))
             continue
+        # the drive mode: Cluster Themes' while it writes one (it reads a plug-in hybrid's), else Comfort's; a change of
+        # where it comes from starts over (no pulse for the first reading from the other one)
+        sh = shared_mode()
+        mode, src = (sh[0], 'Cluster Themes') if sh else (mode_number(cmode), 'Comfort')
+        if src != source:
+            log.info('drive mode from %s%s', src, '' if sh or mode is not None else ' (it reports none: %r)' % (cmode,))
+            source, prev = src, None
+        report(comfort='reachable', mode=name(mode), source=src)
         if isinstance(mode, int):
             if mode != prev:
                 log.info('drive mode %s -> %s', name(prev), name(mode))
@@ -424,14 +522,17 @@ def daemon(cfg):
                         pulse(cfg, '%s -> %s' % (name(prev), name(mode)))
                     except ComfortError as e:
                         log.warning('pulse not run: %s', e)
+                        last('not run: %s' % e)
                     quiet_until = time.monotonic() + cfg['cooldown_s']
                     try:         # the mode after the pulse is the one the next change is measured from
-                        after = ambient_of(read_state()).get('mode')
+                        sh = shared_mode()
+                        after = sh[0] if sh and source == 'Cluster Themes' else mode_number(ambient_of(read_state()).get('mode'))
                         mode = after if isinstance(after, int) else mode
                     except ComfortError:
                         pass
             prev = mode
         time.sleep(poll)
+    report(force=True, comfort=None, mode=None, source=None, last='stopped', lastAt=time.time())
     log.info('stopped')
 
 
@@ -450,7 +551,8 @@ def status(cfg):
         amb = ambient_of(read_state())
         mods = amb.get('modules') or []
         print('Comfort: reachable at %s' % SOCK)
-        print('drive mode: %s%s' % (name(amb.get('mode')), ' (Sport)' if amb.get('mode') in cfg['sport_modes'] else ''))
+        cm = mode_number(amb.get('mode'))
+        print("drive mode, Comfort's: %s%s (it sends %r)" % (name(cm), ' (Sport)' if cm in cfg['sport_modes'] else '', amb.get('mode')))
         print("car's own ambient light: %s" % {True: 'on', False: 'OFF (no pulse while it is off)'}.get(amb.get('carOn'), 'unknown'))
         print('light modules found: %d%s' % (len(mods), '' if mods else ' (NO PULSE POSSIBLE: Comfort found none)'))
         for x in mods:
@@ -461,6 +563,9 @@ def status(cfg):
         ok = False
         print('Comfort: %s' % e)
         print('  (install IterioDev\'s Ambient Light app from the MGU Store: it brings the Comfort tool)')
+    sh = shared_mode()
+    print("drive mode, Cluster Themes': %s" % ('%s%s (the car sends %r; this one is used)' % (name(sh[0]), ' (Sport)' if sh[0] in cfg['sport_modes'] else '', sh[1])
+                                               if sh else 'none (Cluster Themes 0.22.6 or later writes it while it runs)'))
     pids = ambient_config_pids()
     print('Ambient config app (MGU App Kit): %s' % ('RUNNING, pid %s (when_ambient_config: %s)' % (
         ', '.join(map(str, pids)), cfg['when_ambient_config']) if pids else 'not running'))
@@ -547,6 +652,8 @@ def self_test():
     assert r['on'] is False and r['bright'] == 70 and r['follow'] is True and r['modes']['on'] is True
     assert canon(snap) == canon(json.loads(json.dumps(snap)))
     assert load_config(None)['phase_ms'] >= MIN_PHASE_MS
+    assert [mode_number(v) for v in (1, '3', 'SPORT', 'PHEV_SPORT_STANDARD', 'PHEV_SPORT_PLUS', 'SPORT_INDIVIDUAL', 'PHEV_COMFORT',
+                                      'ECO_PRO', 'PHEV_ECO_PRO_PLUS', 'ADAPTIVE', None, 0, True, 'NOPE')] == [1, 3, 1, 1, 2, 3, 4, 7, 8, 10, None, None, None, None]
     print('self-test ok')
     return 0
 
