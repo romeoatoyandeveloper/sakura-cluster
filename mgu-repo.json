@@ -11,8 +11,5 @@
       "shared": ["kit", "shared"],
       "output": "dist/{id}@{version}.tgz"
     }
-  },
-  "tools": [
-    { "id": "sport-ambient-pulse", "path": "native/sport-ambient-pulse" }
-  ]
+  }
 }

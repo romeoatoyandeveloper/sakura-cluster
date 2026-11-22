@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 22 2026
 
+- **Sport ambient pulse removed** from this Store source. If it is installed on your car, remove it in the Store (the light is put back when it goes). Cluster Themes and HUD Widgets are unchanged.
 - **Cluster Themes 0.22.5, HUD Widgets 0.16.5:**
   - **New theme: Neon Highway + Map.** Neon Highway with a window for your phone's map in the middle of the cluster, between the speed and the gear, in a neon frame from cyan to magenta. The road runs up into the map; the palms, the speed effects and the revs go on round it; in a bend the road banks but the window stays still; braking hard turns the frame red. With no map the window closes and it is plain Neon Highway. Needs robertnisipeanu's Waze on Cluster (patched), Instrument cluster > Central display area on Map view, and the switch below on.
   - **Waze map is now Phone map** on the page, with **Show the phone's map in the theme**: the map can be Google Maps, Waze or Apple Maps from CarPlay, or Google Maps from Android Auto (Waze on Cluster shows whichever the phone sends). Same setting as before, nothing to set again.
