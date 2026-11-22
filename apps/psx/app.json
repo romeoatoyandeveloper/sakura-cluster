@@ -1,0 +1,39 @@
+{
+  "id": "psx",
+  "title": "PSX",
+  "description": "PlayStation games on the centre screen, parked only, with a PS4 or PS5 controller (USB or Bluetooth). Needs the psx-core tool (the emulator, PCSX-ReARMed) from the Store; your own game files on a USB stick.",
+  "version": "0.1.0",
+  "vendor": "custom",
+  "loggingId": "OAX1",
+  "iconGlyph": "PS1",
+  "shared": [],
+  "signals": {
+    "de.bmw.infotainment.vehicle.Vehicle2": {
+      "statusCarSpeed2": "rs"
+    }
+  },
+  "screens": [
+    {
+      "name": "MAIN",
+      "kind": "canvas",
+      "title": "PSX",
+      "buttons": [
+        [
+          "BTN_SETTINGS",
+          "All settings"
+        ]
+      ]
+    }
+  ],
+  "settings": [
+    {
+      "key": "parkedOnly",
+      "label": "Parked only (pause when the car moves)",
+      "type": "bool",
+      "default": true
+    }
+  ],
+  "config": {
+    "_comment": "The emulator is psx-core (native/psx-core, a Store tool): its socket and frames in /dev/shm/psx-core (main.js)."
+  }
+}

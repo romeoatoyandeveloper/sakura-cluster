@@ -11,5 +11,8 @@
       "shared": ["kit", "shared"],
       "output": "dist/{id}@{version}.tgz"
     }
-  }
+  },
+  "tools": [
+    { "id": "psx-core", "path": "native/psx-core" }
+  ]
 }

@@ -1,0 +1,14 @@
+[Unit]
+Description=psx-core: the PSX app's PlayStation emulator (PCSX-ReARMed); reads PS4 / PS5 controllers, plays the sound
+
+[Service]
+Type=simple
+ExecStart=/var/opt/psx-core/current/psx-core
+# the head unit's system.conf sends a service's output nowhere by default
+StandardOutput=journal
+StandardError=journal
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

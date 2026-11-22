@@ -1,0 +1,47 @@
+{
+  "id": "psx-core",
+  "kind": "tool",
+  "version": "0.1.0",
+  "title": "PSX core (PlayStation emulator)",
+  "description": "The emulator behind the PSX app: PCSX-ReARMed, run as a background service so it can read a PS4 / PS5 controller (USB or Bluetooth) and reach the sound. Install it with the PSX app; it starts with the head unit (restart once after installing). GPL-2.0.",
+  "optional": true,
+  "uninstallable": true,
+  "mguHmi": [
+    "ID7"
+  ],
+  "files": [
+    {
+      "path": "psx-core",
+      "from": "bin/psx-core",
+      "mode": "0755"
+    },
+    {
+      "path": "test.exe",
+      "from": "bin/test.exe",
+      "mode": "0644"
+    },
+    {
+      "path": "COPYING",
+      "from": "COPYING",
+      "mode": "0644"
+    }
+  ],
+  "units": [
+    {
+      "name": "psx-core.service",
+      "from": "psx-core.service"
+    }
+  ],
+  "enable": [
+    {
+      "unit": "psx-core.service",
+      "target": "multi-user.target"
+    }
+  ],
+  "restart": [
+    "psx-core.service"
+  ],
+  "versionFiles": [
+    "psx-core"
+  ]
+}

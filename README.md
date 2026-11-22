@@ -16,6 +16,12 @@ Redraws the whole instrument cluster in a theme of your choice: an M-style clust
 <p align="center"><img src="docs/images/cluster-nightdrive.png" width="900" alt="Night Drive theme"></p>
 <p align="center"><img src="docs/images/cluster-evaurora.png" width="900" alt="Aurora theme"></p>
 
+## PSX
+
+<img src="apps/psx/icon.png" width="72" align="left" alt="PSX icon">
+
+PlayStation games on the centre screen with a PS4 or PS5 controller, parked only. Install **PSX** and **psx-core** (the emulator, PCSX-ReARMed) from the Store; your own game files on a USB stick. [Read more](apps/psx/README.md)
+
 ## HUD Widgets
 
 <img src="apps/idrive_hud_widgets/icon.png" width="72" align="left" alt="HUD Widgets icon">
