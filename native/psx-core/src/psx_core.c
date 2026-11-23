@@ -51,7 +51,7 @@
 #include <unistd.h>
 #include "libretro.h"
 
-#define VERSION "0.2.0"
+#define VERSION "0.2.1"
 #define FW 1024
 #define FH 512
 #define SLOT (FW * FH * 4)
@@ -64,19 +64,48 @@ static volatile sig_atomic_t quit_now;
 static int restart_now;            /* a BIOS was added: start again, so the core finds it */
 static char **self_argv;
 
-/* ------------------------------------------------------------------ log */
+/* ------------------------------------------------------------------ log: the journal, and /var/opt/psx/psx-core.log,
+   which the PSX app shows when it can't reach this (the head unit keeps its journal only minutes) */
+static int logfd = -1;
+
+static void log_open(void) {
+    char p[300], old[310];
+    snprintf(p, sizeof p, "%s/psx-core.log", HOME);
+    struct stat st;
+    if (!stat(p, &st) && st.st_size > 128 * 1024) { snprintf(old, sizeof old, "%s.1", p); rename(p, old); }
+    logfd = open(p, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0644);
+    if (logfd >= 0) fchmod(logfd, 0644);
+}
+
 static void say(const char *fmt, ...) {
     va_list ap;
     time_t t = time(NULL);
     struct tm tm;
-    char ts[32];
+    char line[1200];
     localtime_r(&t, &tm);
-    strftime(ts, sizeof ts, "%H:%M:%S", &tm);
-    fprintf(stderr, "%s psx-core: ", ts);
+    size_t n = strftime(line, sizeof line, "%Y-%m-%d %H:%M:%S psx-core: ", &tm);
     va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    int k = vsnprintf(line + n, sizeof line - n - 2, fmt, ap);
     va_end(ap);
-    fputc('\n', stderr);
+    n = k < 0 ? n : n + k < sizeof line - 2 ? n + k : sizeof line - 2;
+    line[n++] = '\n';
+    if (write(2, line, n) < 0) { /* no journal */ }
+    if (logfd >= 0 && write(logfd, line, n) < 0) { /* full */ }
+}
+
+/* a crash: one line in the log (async-signal-safe), then the default action (systemd starts it again) */
+static void on_crash(int sig) {
+    static const char msg[] = "psx-core: crashed (signal ";
+    char num[8];
+    int i = 0, v = sig;
+    do { num[i++] = '0' + v % 10; v /= 10; } while (v && i < 6);
+    if (logfd >= 0) {
+        if (write(logfd, msg, sizeof msg - 1) < 0) { /* nothing to do */ }
+        while (i--) if (write(logfd, &num[i], 1) < 0) { break; }
+        if (write(logfd, ")\n", 2) < 0) { /* nothing to do */ }
+    }
+    signal(sig, SIG_DFL);
+    raise(sig);
 }
 
 static double now_s(void) {
@@ -908,9 +937,13 @@ int main(int argc, char **argv) {
     signal(SIGINT, on_signal);
     for (int i = 0; i < MAXPADS; i++) pads[i].fd = -1;
     char p[400];
-    mkdir(RUN, 0755); chmod(RUN, 0755);
     const char *sub[] = {"", "/games", "/bios", "/saves", NULL};
     for (int i = 0; sub[i]; i++) { snprintf(p, sizeof p, "%s%s", HOME, sub[i]); mkdir(p, 0755); }
+    log_open();
+    signal(SIGSEGV, on_crash); signal(SIGBUS, on_crash); signal(SIGILL, on_crash); signal(SIGFPE, on_crash); signal(SIGABRT, on_crash);
+    say("psx-core %s starting (uid %d, pid %d)", VERSION, (int)getuid(), (int)getpid());
+    if (mkdir(RUN, 0755) < 0 && errno != EEXIST) say("can't make %s: %s", RUN, strerror(errno));
+    chmod(RUN, 0755);
     if (shm_open_frames() < 0) { say("no frame buffer in %s: %s", RUN, strerror(errno)); return 1; }
     snprintf(p, sizeof p, "%s/ctl.sock", RUN);
     unlink(p);
@@ -928,7 +961,7 @@ int main(int argc, char **argv) {
     retro_set_input_state(input_state_cb);
     retro_init();
     have_core_init = 1;
-    say("psx-core %s: socket %s, games in %s/games", VERSION, p, HOME);
+    say("ready: socket %s, games in %s/games", p, HOME);
     scan_pads();
 
     double next = now_s(), last_scan = 0, last_card = 0;

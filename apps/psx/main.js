@@ -81,7 +81,7 @@ class Psx {
             if (this.sock === s) { this.sock = null; this.st = null; this.log.info('psx-core: not reachable'); this.kick(); }
             setTimeout(() => this.connect(), 3000);
         };
-        s.on('error', () => {});
+        s.on('error', (e) => { this.connErr = e && (e.code || e.message); });
         s.on('close', gone);
     }
     send(cmd) { if (this.sock) this.sock.write(cmd + '\n'); }
@@ -204,14 +204,44 @@ class Psx {
         cv.fillRect(X0, TAB_Y + TAB_H, W - 2 * X0, 1, C.line);
     }
 
+    /**
+     * Why psx-core can't be reached, as far as this app can see: installed (its files), started since the head unit
+     * started (its socket in /dev/shm), the error connecting, and the last lines of its own log (/var/opt/psx).
+     */
+    coreCheck() {
+        const now = Date.now();
+        if (this.checkCache && now - this.checkCache.t < 2000) return this.checkCache.v;
+        const ex = (p) => { try { fs.statSync(p); return true; } catch (e) { return e.code === 'ENOENT' ? false : null; } };
+        let version = null, log = [];
+        try { version = JSON.parse(fs.readFileSync('/var/opt/psx-core/current/component.json', 'utf8')).version; } catch (e) { /* not there / not readable */ }
+        try { log = fs.readFileSync('/var/opt/psx/psx-core.log', 'utf8').trim().split('\n').slice(-6); } catch (e) { /* none yet */ }
+        const v = { installed: ex('/var/opt/psx-core/current/psx-core'), version, started: ex(SOCK), err: this.connErr || null, log };
+        this.checkCache = { t: now, v };
+        return v;
+    }
+
     noCore(cv) {
-        cv.text('The PSX core isn\'t running', X0, CT + 60, 26, C.text, B);
-        [
-            'PSX needs its emulator, psx-core: a Store tool next to this app.',
-            '1. In the Store, install psx-core.',
-            '2. Restart the head unit once: the core starts with it.',
-            'This page finds it by itself once it runs.',
-        ].forEach((t, i) => cv.text(t, X0, CT + 110 + i * 34, 18, i ? C.text : C.dim, L));
+        const k = this.coreCheck();
+        let title, lines;
+        if (k.installed === false) {
+            title = 'psx-core isn\'t installed';
+            lines = ['PSX needs its emulator: in the Store it is listed as "PSX core (PlayStation emulator)".', 'Install it, then restart the head unit once: it starts with the head unit.'];
+        } else if (!k.started) {
+            title = 'psx-core is installed' + (k.version ? ' (' + k.version + ')' : '') + ' but hasn\'t started';
+            lines = ['It starts with the head unit: restart it once after installing.', 'Still this after a restart? Send a photo of this page.'];
+        } else {
+            title = 'psx-core started but doesn\'t answer';
+            lines = ['It may have stopped: it starts again by itself in a few seconds.', 'Still this? Send a photo of this page.'];
+        }
+        cv.text(title, X0, CT + 50, 24, C.text, B);
+        lines.forEach((t, i) => cv.text(t, X0, CT + 88 + i * 28, 17, C.text, L));
+        const facts = 'Installed: ' + (k.installed === null ? 'can\'t tell' : k.installed ? 'yes' + (k.version ? ', ' + k.version : '') : 'no') +
+            '    Started since the head unit started: ' + (k.started === null ? 'can\'t tell' : k.started ? 'yes' : 'no') + (k.err ? '    Connecting: ' + k.err : '');
+        cv.text(facts, X0, CT + 166, 15, C.dim, L);
+        if (k.log.length) {
+            cv.text('Its last log lines', X0, CT + 206, 15, C.dim, B);
+            k.log.forEach((t, i) => cv.text(t.slice(0, 150), X0, CT + 232 + i * 22, 14, /crash|can't|error|fail/i.test(t) ? C.amber : C.text, L));
+        } else cv.text('No log from it yet (it writes one when it starts).', X0, CT + 206, 15, C.dim, L);
     }
 
     gamesTab(cv) {

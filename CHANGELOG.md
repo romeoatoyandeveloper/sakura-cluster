@@ -2,6 +2,10 @@
 
 Newest first. Dates are when the build was pushed.
 
+## Nov 23 2026
+
+- **PSX 0.2.1, psx-core 0.2.1: why the core isn't running, on the screen.** When PSX can't reach psx-core it now says whether psx-core is installed (and which version), whether it started since the head unit started, the error connecting, and the last lines of psx-core's own log, which it now keeps in /var/opt/psx/psx-core.log (a crash leaves a line too).
+
 ## Nov 22 2026
 
 - **PSX 0.2.0, psx-core 0.2.0: the PlayStation startup screen.** Your PlayStation's BIOS (SCPH1001.BIN or similar) on the USB stick is picked up by itself: games then start with the Sony intro, and **PlayStation menu** (the console's own memory card and CD player screens) is listed first. The Controller & sound page says which BIOS is in use. Sony's BIOS is not included: it comes from your own console. Tested on the bench with a real SCPH1001 (the intro and the CD player menu).
