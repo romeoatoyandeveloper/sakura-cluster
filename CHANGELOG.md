@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 23 2026
 
+- **PSX 0.2.2: installs psx-core with it.** PSX now requires psx-core, so the Store installs (or updates) the emulator first whenever PSX is installed or updated: no separate step. Restart the head unit once after the install.
 - **PSX 0.2.1, psx-core 0.2.1: why the core isn't running, on the screen.** When PSX can't reach psx-core it now says whether psx-core is installed (and which version), whether it started since the head unit started, the error connecting, and the last lines of psx-core's own log, which it now keeps in /var/opt/psx/psx-core.log (a crash leaves a line too).
 
 ## Nov 22 2026
