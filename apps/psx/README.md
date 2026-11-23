@@ -2,9 +2,13 @@
 
 <img src="icon.png" width="72" align="left" alt="PSX icon">
 
-PlayStation games on the centre screen, with a PS4 or PS5 controller, **parked only**. The game sits in the middle
-of the screen at 4:3; the PS button opens the pause menu (resume, restart, quit). If the car starts moving the game
-pauses and the menu says why.
+PlayStation games on the centre screen, with a PS4 or PS5 controller. While a game runs it covers the whole screen:
+at 4:3 (the game's own shape, as high as the screen), wide (16:9) or stretched to fill it, set in the pause menu
+(**Picture**) or in Settings (**Game picture**). The PS button or a tap on the screen opens the pause menu (resume,
+picture, restart, quit).
+
+**Parked only** (Settings, on at first): the game pauses when the car moves, and the menu says why. Turn it off when
+passengers play on the move.
 
 It needs **psx-core**, the emulator, from the Store as well (a background tool: [native/psx-core](../../native/psx-core/README.md)).
 

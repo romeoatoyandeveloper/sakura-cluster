@@ -97,6 +97,7 @@ class Display {
         this.sheet = null;                           // sheet.js page drawn over the app's (openSheet)
         this.ccuLast = null;                         // last controller state (knob counter, press, push)
         this.ownHidden = new Set();                  // more bar buttons left out where the kit runs the screen (hideButton)
+        this.fullOn = false;                         // fullScreen(true): the app's frames cover the whole screen (a game)
         G.onConfirm(() => { this.lastWords = null; this.tickHandlers.forEach((fn) => fn()); });   // a reset asks / runs out
         const canvasScreens = (spec.screens || []).filter((s) => s.kind === 'canvas');
         this.screen = canvasScreens[0] || null;
@@ -475,6 +476,7 @@ class Display {
         const logical = (q) => (r ? q : { i: q.i, x: (q.x - pl.ox) / pl.scale, y: (q.y - pl.oy) / pl.scale, w: q.w / pl.scale, h: q.h / pl.scale });
         this.tabs = (rects || []).map(logical);
         const W = pl.w, hx = HMI.left - pl.x, by = pl.h - this.barH();
+        if (this.own() && this.fullOn) { this.gpu.claim([{ x: 0, y: 0, w: W, h: pl.h }].map(logical)); return; }
         if (this.own()) {
             // header (tabs), page and the slim bar: the back column and the status corner stay the HMI's
             this.gpu.claim([{ x: hx, y: 0, w: this.headEnd - hx, h: this.headH() }, { x: hx, y: this.headH(), w: W - hx, h: pl.h - this.headH() }].map(logical));
@@ -545,7 +547,7 @@ class Display {
             const spare = ah - 2 * PAGE_GAP - src.h * s;
             if (!this.barH() && spare > 0) {
                 const top = Math.round(this.headH() + PAGE_GAP - src.y * s);
-                if (this.screen && this.screen.chrome === false) {
+                if (this.bare()) {
                     // a screen the app draws whole (a game, in screen pixels): its page right at the top
                     pl.oy = top;
                     pl.extra = Math.floor(spare / s);
@@ -625,7 +627,7 @@ class Display {
         r.reset();
         r.tabRects = null;
         // full-screen layout: G.frame hands its tabs to the header instead of drawing them
-        r.chrome = this.active() && this.place.full && this.screen.chrome !== false ? { tabs: null } : null;
+        r.chrome = this.active() && this.place.full && !this.bare() ? { tabs: null } : null;
         // where the frame lands on screen (apps that draw some parts in screen pixels, r.xf)
         r.place = this.active() ? this.place : null;
         // the kit runs the screen: buttons drawn on the page (G.button) take the place of the bar's
@@ -855,7 +857,7 @@ class Display {
      * bar buttons still exist in the HMI under the surface, for focus and taps, but aren't drawn).
      */
     barH() {
-        if (this.screen && (this.screen.bar === false || this.screen.chrome === false)) return 0;
+        if (this.screen && this.screen.bar === false || this.bare()) return 0;
         // the kit's bar with nothing left on it (its buttons on the page, Settings a tab): no bar
         return this.ownable() && !this.buttons().length ? 0 : FULL.barH;
     }
@@ -864,8 +866,23 @@ class Display {
         this.ownHidden.add(id); this._btns = null;
         if (this.place) this._place();
     }
-    /** Header height: 0 for "chrome": false (the app draws the whole screen itself, e.g. a game). */
-    headH() { return this.screen && this.screen.chrome === false ? 0 : FULL.headH; }
+    /** Header height: 0 for "chrome": false or fullScreen(true) (the app draws the whole screen itself, e.g. a game). */
+    headH() { return this.bare() ? 0 : FULL.headH; }
+    /** No header and no bar: a "chrome": false screen, or one switched to full screen (fullScreen). */
+    bare() { return !!(this.screen && this.screen.chrome === false) || this.fullOn; }
+    /**
+     * fullScreen(true): where the kit runs the screen, the app's frames cover all of it (no header, no bar,
+     * the back column and the status corner covered too) and every touch is the app's; for a game. The
+     * frame's placement (r.place: scale, ox, oy) says where its logical px land; parts in screen px go under
+     * r.xf(1, 0, 0). fullScreen(false) brings the header and bar back. The HMI's BACK and MENU keys still work.
+     */
+    fullScreen(on) {
+        on = !!on;
+        if (on === this.fullOn) return;
+        this.fullOn = on;
+        this.lastWords = null;
+        if (this.place) this._place();
+    }
 
     /**
      * The HMI's bar buttons in screen pixels, unscrolled: [{ id, label, x, w }]. Where the kit runs

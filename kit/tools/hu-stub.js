@@ -87,6 +87,7 @@ function headUnit(stage, o) {
         onTap(fn) { display.onTap = fn; },
         sheet: (sh) => display.openSheet(sh),
         hideButton(id) { display.hideButton(id); },
+        fullScreen(on) { display.fullScreen(on); },
         onScroll(fn) { display.onScroll = fn; },
         onLayout(fn) { display.onLayout(fn); },
         controller: { grab(on) { display.grab(on); }, onInput(fn) { display.onCcu = fn; } },

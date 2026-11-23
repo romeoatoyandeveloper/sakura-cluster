@@ -11,8 +11,10 @@
  *   /dev/shm/psx-core/ctl.sock   commands to psx-core (status, list, load <path>, unload, pause, resume, reset,
  *                                pair, tone, sys) and its JSON lines back (psx_core.c says which)
  *
- * The PS button opens the pause menu; the d-pad and cross / circle work the menus, as do touch and the iDrive
- * controller. When the car moves (setting "parkedOnly", on by default) the game pauses and the menu says why.
+ * While a game runs the picture covers the whole centre screen (ctx.fullScreen: no header, no bar), at 4:3, 16:9 or
+ * stretched to fill it (setting "picture", also in the pause menu). The PS button or a tap on the screen opens the
+ * pause menu; the d-pad and cross / circle work the menus, as do touch and the iDrive controller. When the car moves
+ * (setting "parkedOnly", on by default) the game pauses and the menu says why; off, passengers play on the move.
  * Plain Node 8 (the car's 8.16.2).
  */
 const fs = require('fs');
@@ -37,6 +39,8 @@ const X0 = 32, CT = 112, TAB_Y = 38, TAB_H = 58;
 // joypad bits (psx_core.c: libretro's order, PS = 16)
 const PAD = { CROSS: 1 << 0, UP: 1 << 4, DOWN: 1 << 5, LEFT: 1 << 6, RIGHT: 1 << 7, CIRCLE: 1 << 8, PS: 1 << 16 };
 const TABS = [['games', 'Games'], ['check', 'Controller & sound'], ['car', 'Car']];
+// the game's picture on the full screen: [setting value, name, width for a height h]
+const PICTURES = [['43', '4:3', (h) => Math.round(h * 4 / 3)], ['wide', 'Wide', (h) => Math.round(h * 16 / 9)], ['fill', 'Fill', null]];
 
 class Psx {
     constructor(ctx) {
@@ -58,7 +62,7 @@ class Psx {
     start() {
         const ctx = this.ctx;
         this.loop = ctx.loop('MAIN', 10, () => this.render());
-        ctx.onTap(() => this.kick());
+        ctx.onTap(() => { if (this.playing() && !this.menu) this.toggleMenu(); this.kick(); });
         ctx.ui.onVisible((name, v) => { if (name === 'MAIN' && !v && this.playing()) { this.send('pause'); this.menu = true; } });
         this.connect();
         setInterval(() => this.watchCar(), 500);
@@ -139,9 +143,11 @@ class Psx {
         if (this.tab === 'car') return [{ run: () => this.send('sys') }];
         return [{ run: () => this.send('pair') }, { run: () => this.send('tone') }];
     }
+    picture() { return PICTURES.find((p) => p[0] === this.ctx.settings.get('picture')) || PICTURES[0]; }
     pauseItems() {
         return [
             { text: 'Resume', run: () => { if (this.blocked()) this.flash('Not while the car is moving.', C.amber); else this.toggleMenu(); } },
+            { text: 'Picture: ' + this.picture()[1], run: () => { const i = PICTURES.indexOf(this.picture()); this.ctx.settings.set('picture', PICTURES[(i + 1) % PICTURES.length][0]); this.kick(); } },
             { text: 'Restart the game', run: () => { this.send('reset'); if (!this.blocked()) this.toggleMenu(); } },
             { text: 'Quit to the games', run: () => { this.send('unload'); this.menu = false; this.send('list'); } },
         ];
@@ -175,11 +181,23 @@ class Psx {
 
     /* ---------- drawing ---------- */
     render() {
-        const cv = this.ctx.canvas(W, H);
-        cv.clear(C.bg);
         const play = this.playing();
+        if (this.ctx.fullScreen) this.ctx.fullScreen(play);      // (before the canvas: it changes where the frame goes)
+        const cv = this.ctx.canvas(W, H);
+        // a game on the full screen: everything in screen px (cv.place: where the logical px land)
+        const pl = play && cv.place && cv.place.full && !cv.chrome ? cv.place : null;
+        cv.clear(play ? '#000000' : C.bg);
         if (play) this.readFrame();
-        // the game's picture first: the renderer's conversion of pictures stops at the first quad (renderd.js)
+        if (pl) {
+            cv.xf(1, 0, 0);
+            // the game's picture first: the renderer's conversion of pictures stops at the first quad (renderd.js)
+            if (this.frame) this.gameScreen(cv, pl);
+            this.sideScreen(cv, pl);
+            if (this.menu) this.pauseMenu(cv, pl);
+            this.toast(cv, pl.w / 2, pl.h - 70, pl);
+            cv.xf();
+            return this.ctx.ui.image('MAIN_GFX', cv);
+        }
         if (play && this.frame) this.gameView(cv);
         G.frame(cv, this.ctx.theme(), [], -1, [
             !this.sock ? { text: 'Core not running', color: C.red } : play ? { text: this.menu ? 'Paused' : 'Playing', color: this.menu ? C.amber : C.green } : null,
@@ -192,13 +210,15 @@ class Psx {
             else if (this.tab === 'car') this.carTab(cv);
             else this.checkTab(cv);
         }
-        if (play && this.menu) this.pauseMenu(cv);
-        if (this.note && Date.now() < this.note.until) {
-            const w = cv.textWidth(this.note.text, 17, L) + 48, x = (W - w) / 2, y = H - 64;
-            cv.roundRect(x, y, w, 44, 22, '#1b2230');
-            cv.text(this.note.text, W / 2, y + 28, 17, this.note.color, { font: 'label', literal: true, align: 'center' });
-        }
+        if (play && this.menu) this.pauseMenu(cv, null);
+        this.toast(cv, W / 2, H - 64, null);
         return this.ctx.ui.image('MAIN_GFX', cv);
+    }
+    toast(cv, cx, y, pl) {
+        if (!this.note || Date.now() >= this.note.until) return;
+        const size = pl ? 20 : 17, w = cv.textWidth(this.note.text, size, L) + 48;
+        cv.roundRect(cx - w / 2, y, w, size + 27, (size + 27) / 2, '#1b2230');
+        cv.text(this.note.text, cx, y + size + 11, size, this.note.color, { font: 'label', literal: true, align: 'center' });
     }
 
     openTab(id) {
@@ -371,6 +391,24 @@ class Psx {
         cv.text('psx-core ' + (s.version || '?') + ': what it sees on this head unit. A photo of this page says why a stick, a controller or the sound isn\'t found.', X0, H - 6, 13, C.dim, L);
     }
 
+    /** the picture on the full screen (screen px): as high as the screen, as wide as the picture setting says */
+    gameScreen(cv, pl) {
+        const h = pl.h, wf = this.picture()[2], w = wf ? Math.min(pl.w, wf(h)) : pl.w, x = Math.round((pl.w - w) / 2);
+        cv.image(IMG, x, 0, w, h);
+        this.view = { x, y: 0, w, h };
+    }
+    /** beside the picture (screen px), where there is room: the game, the players, a Menu button */
+    sideScreen(cv, pl) {
+        const v = this.view || { x: 0, w: pl.w }, side = v.x;
+        if (side < 200 || this.menu) return;
+        const st = this.st || {}, pads = st.pads || [];
+        wrap(cv, st.game || '', 22, side - 60).slice(0, 2).forEach((t, i) => cv.text(t, 36, 70 + i * 30, 22, C.text, B));
+        cv.text(st.fps ? st.fps.toFixed(0) + ' fps' : '', 36, 140, 16, C.dim, L);
+        (pads.length ? pads.map((p) => 'P' + p.player + ' ' + p.name) : ['No controller']).forEach((t, i) => cv.text(t.slice(0, 40), 36, 196 + i * 28, 16, pads.length ? C.dim : C.amber, L));
+        cv.text('PS button or a tap: menu', 36, pl.h - 36, 16, C.dim, L);
+        pill(cv, v.x + v.w + (side - 170) / 2, 50, 170, 54, 'Menu', 'outline', () => this.toggleMenu(), 'menu', pl);
+    }
+
     gameView(cv) {
         // 4:3 whatever the game's resolution, as big as the page allows
         const h = H - 20, w = Math.round(h * 4 / 3), x = (W - w) / 2, y = 10;
@@ -389,26 +427,32 @@ class Psx {
         pill(cv, v.x + v.w + 30, 76, 150, 44, 'Menu', 'outline', () => this.toggleMenu(), 'menu');
     }
 
-    pauseMenu(cv) {
-        const items = this.pauseItems(), w = 420, h = 90 + items.length * 62, x = (W - w) / 2, y = (H - h) / 2;
-        cv.fillRect(0, 0, W, H, '#000000a0');
+    /** pl: on the full screen (screen px), else the page (logical px) */
+    pauseMenu(cv, pl) {
+        const SW = pl ? pl.w : W, SH = pl ? pl.h : H, moving = this.blocked();
+        const items = this.pauseItems(), w = moving ? 560 : 440, top = moving ? 104 : 78, h = top + 12 + items.length * 60, x = (SW - w) / 2, y = (SH - h) / 2;
+        cv.fillRect(0, 0, SW, SH, '#000000a0');
         cv.roundRect(x, y, w, h, 18, '#141a24');
-        cv.text(this.blocked() ? 'Paused: the car is moving' : 'Paused', x + 28, y + 46, 22, this.blocked() ? C.amber : C.text, B);
+        cv.text(moving ? 'Paused: the car is moving' : 'Paused', x + 28, y + 46, 22, moving ? C.amber : C.text, B);
+        if (moving) cv.text('Passengers playing? In Settings, turn off "Parked only".', x + 28, y + 80, 15, C.dim, L);
         items.forEach((it, i) => {
-            const yy = y + 72 + i * 62;
-            pill(cv, x + 28, yy, w - 56, 48, it.text, i === this.sel ? 'primary' : 'outline', () => { this.sel = i; it.run(); }, 'pause:' + i);
+            const yy = y + top + i * 60;
+            pill(cv, x + 28, yy, w - 56, 48, it.text, i === this.sel ? 'primary' : 'outline', () => { this.sel = i; it.run(); }, 'pause:' + i, pl);
         });
     }
 }
 
 /* ---------- small drawing helpers ---------- */
-function pill(cv, x, y, w, h, text, kind, run, key) {
+/** pl: drawn in screen px (cv.xf), its touch target placed back in the page's logical px */
+function pill(cv, x, y, w, h, text, kind, run, key, pl) {
     let fg = C.text;
     if (kind === 'primary') { cv.roundRect(x, y, w, h, h / 2, C.text); fg = C.ink; }
     else if (kind === 'muted') { cv.roundRect(x, y, w, h, h / 2, '#ffffff1a'); fg = C.dim; }
     else cv.strokeRoundRect(x, y, w, h, h / 2, 1, C.border);
     cv.text(text, x + w / 2, y + h / 2 + 6, 16, fg, { font: 'bold', literal: true, align: 'center' });
-    if (run && kind !== 'muted') cv.target(x, y, w, h, run, key, h / 2);
+    if (!run || kind === 'muted') return;
+    if (pl) cv.target((x - pl.ox) / pl.scale, (y - pl.oy) / pl.scale, w / pl.scale, h / pl.scale, run, key, h / 2 / pl.scale);
+    else cv.target(x, y, w, h, run, key, h / 2);
 }
 function wrap(cv, text, size, maxW) {
     const out = [];

@@ -4,6 +4,7 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 23 2026
 
+- **PSX 0.3.0: games full screen.** While a game runs it covers the whole centre screen, with no header or button bar: at 4:3 as high as the screen (the game's name, the players and a Menu button beside it), or wide (16:9), or stretched to fill it, picked with **Picture** in the pause menu (or Game picture in Settings). The PS button or a tap on the screen opens the pause menu; Quit to the games brings the app's pages back. Paused because the car moves, the menu now says that **Parked only** in Settings is what does it, for passengers who play on the move. Tested on the bench (the three pictures, the menu, back to the pages); not yet on a car.
 - **PSX 0.2.3, psx-core 0.2.2: USB sticks, the USB controller and the sound, for the car.**
   - **USB sticks:** found where the Store finds them (anything the car mounts under /media), whatever the file system, and the games list fills by itself when you plug one in: no Look again. A BIOS on the stick is taken then too. The Games page says which sticks it sees.
   - **Controller on USB:** when the car has no driver for it, psx-core reads the controller straight from its USB connection.

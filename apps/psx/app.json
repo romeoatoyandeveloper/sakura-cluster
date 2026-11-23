@@ -2,7 +2,7 @@
   "id": "psx",
   "title": "PSX",
   "description": "PlayStation games on the centre screen, parked only, with a PS4 or PS5 controller on a USB cable. Needs the psx-core tool (the emulator, PCSX-ReARMed) from the Store; your own game files on a USB stick.",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "requires": {
     "psx-core": "0.2.2"
   },
@@ -34,6 +34,26 @@
       "label": "Parked only (pause when the car moves)",
       "type": "bool",
       "default": true
+    },
+    {
+      "key": "picture",
+      "label": "Game picture",
+      "type": "choice",
+      "default": "43",
+      "options": [
+        [
+          "43",
+          "4:3, as on a TV"
+        ],
+        [
+          "wide",
+          "Wide (16:9)"
+        ],
+        [
+          "fill",
+          "Fill the screen (stretched)"
+        ]
+      ]
     }
   ],
   "config": {

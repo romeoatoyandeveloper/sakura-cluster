@@ -547,6 +547,12 @@ async function runInner(impl) {
         onTap(fn) { display.onTap = fn; },
         /** Show a sheet (sheet.js) over the page; false where it can't be (software path, other renderers). */
         sheet(sh) { return display.openSheet(sh); },
+        /**
+         * fullScreen(on): while on, the app's frames cover the whole screen (no header, no bar, no back column) and
+         * take every touch, where the kit runs the screen; for a game. Draw screen px under cv.xf(1, 0, 0); cv.place
+         * says where the logical px land. The HMI's BACK and MENU keys still work.
+         */
+        fullScreen(on) { display.fullScreen(on); },
         /** hideButton(id): leave bar button id out where the kit runs the screen (its job is on the page there). */
         hideButton(id) { display.hideButton(id); },
         /**
