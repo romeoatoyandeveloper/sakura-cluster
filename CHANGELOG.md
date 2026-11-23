@@ -4,6 +4,12 @@ Newest first. Dates are when the build was pushed.
 
 ## Nov 23 2026
 
+- **PSX 0.2.3, psx-core 0.2.2: USB sticks, the USB controller and the sound, for the car.**
+  - **USB sticks:** found where the Store finds them (anything the car mounts under /media), whatever the file system, and the games list fills by itself when you plug one in: no Look again. A BIOS on the stick is taken then too. The Games page says which sticks it sees.
+  - **Controller on USB:** when the car has no driver for it, psx-core reads the controller straight from its USB connection.
+  - **Sound:** when the car has no sound player, psx-core writes to the car's sound devices itself. **Test sound** tries the next output each tap and says which one played; the last one you hear is the one games use. A sound device is held only while a game plays, and let go when it pauses.
+  - **New page: Car.** What psx-core sees on the head unit: USB sticks and disks, USB devices and their drivers, input devices, sound cards and outputs, the sound and Bluetooth services. A photo of it says why something isn't found.
+  - Tested on the bench (sticks, the BIOS, the list filling by itself, the test tone, the pages, the PS4 and PS5 reports); the USB controller reading and the sound devices are not testable on the bench and not yet tested on a car.
 - **PSX 0.2.2: installs psx-core with it.** PSX now requires psx-core, so the Store installs (or updates) the emulator first whenever PSX is installed or updated: no separate step. Restart the head unit once after the install.
 - **PSX 0.2.1, psx-core 0.2.1: why the core isn't running, on the screen.** When PSX can't reach psx-core it now says whether psx-core is installed (and which version), whether it started since the head unit started, the error connecting, and the last lines of psx-core's own log, which it now keeps in /var/opt/psx/psx-core.log (a crash leaves a line too).
 

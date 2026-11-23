@@ -1,10 +1,10 @@
 {
   "id": "psx",
   "title": "PSX",
-  "description": "PlayStation games on the centre screen, parked only, with a PS4 or PS5 controller (USB or Bluetooth). Needs the psx-core tool (the emulator, PCSX-ReARMed) from the Store; your own game files on a USB stick.",
-  "version": "0.2.2",
+  "description": "PlayStation games on the centre screen, parked only, with a PS4 or PS5 controller on a USB cable. Needs the psx-core tool (the emulator, PCSX-ReARMed) from the Store; your own game files on a USB stick.",
+  "version": "0.2.3",
   "requires": {
-    "psx-core": "0.2.1"
+    "psx-core": "0.2.2"
   },
   "vendor": "custom",
   "loggingId": "OAX1",

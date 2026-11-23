@@ -14,14 +14,19 @@ It needs **psx-core**, the emulator, from the Store as well (a background tool: 
 2. Open **PSX** from the apps menu. **Controller & sound** shows what it finds:
    - **Controller:** plug a PS4 or PS5 controller in with its USB cable, or pair it over Bluetooth: hold **PS + Share**
      (PS4) or **PS + Create** (PS5) until the light flashes, then tap **Pair a controller**.
-   - **Sound:** tap **Test sound**.
-3. **Games:** your own copies, on a USB stick in any folder (`.cue` with its `.bin`, `.chd`, `.pbp`, `.iso`), or in
-   `/var/opt/psx/games`. **PS1 test picture** is always there, to try the screen and the controller.
+   - **Sound:** tap **Test sound** until you hear the tone: each tap tries the next output, and the one you last
+     heard is the one games use.
+3. **Games:** your own copies, on a USB stick (FAT32 or exFAT) in any folder up to three deep (`.cue` with its `.bin`,
+   `.chd`, `.pbp`, `.iso`). Plug it in and the list fills by itself. **PS1 test picture** is always there, to try the
+   screen and the controller.
 4. **The PlayStation startup screen:** put your console's BIOS (`SCPH1001.BIN` or similar) on the stick too. PSX picks
    it up by itself; games then start with the Sony intro, and **PlayStation menu** (memory cards, CD player) is listed.
 
-Not yet tested on a car: whether the car's Bluetooth pairs a game controller, and whether the head unit lets an app's
-sound out, are the two open questions; the check page answers both.
+**Car** shows what psx-core sees on the head unit: USB sticks, USB devices (is the controller there, with which
+driver), input and sound devices. A photo of it says why a stick, a controller or the sound isn't found.
+
+On the car so far: psx-core runs; the head unit has no Bluetooth that Linux apps can use, so the controller goes on a
+USB cable; the sound and the USB controller are still to be seen working.
 
 ## Licence
 

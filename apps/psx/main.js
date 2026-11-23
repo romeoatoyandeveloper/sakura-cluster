@@ -4,11 +4,12 @@
  *
  * The emulator itself is psx-core (native/psx-core, a Store tool that runs as root: only root can read a game
  * controller and reach the sound). This app is its screen: the games, a check page (controllers, pairing, sound),
- * and while a game runs, its picture in the middle of the screen, drawn from the frames psx-core leaves in shared
- * memory (/dev/shm/psx-core/frame) as a pixel image (record.js setImage), once per screen refresh.
+ * a page of what psx-core sees on the head unit (USB sticks and devices, input and sound devices), and while a game
+ * runs, its picture in the middle of the screen, drawn from the frames psx-core leaves in shared memory
+ * (/dev/shm/psx-core/frame) as a pixel image (record.js setImage), once per screen refresh.
  *
  *   /dev/shm/psx-core/ctl.sock   commands to psx-core (status, list, load <path>, unload, pause, resume, reset,
- *                                pair, tone) and its JSON lines back (psx_core.c says which)
+ *                                pair, tone, sys) and its JSON lines back (psx_core.c says which)
  *
  * The PS button opens the pause menu; the d-pad and cross / circle work the menus, as do touch and the iDrive
  * controller. When the car moves (setting "parkedOnly", on by default) the game pauses and the menu says why.
@@ -35,6 +36,7 @@ const L = { font: 'label', literal: true };
 const X0 = 32, CT = 112, TAB_Y = 38, TAB_H = 58;
 // joypad bits (psx_core.c: libretro's order, PS = 16)
 const PAD = { CROSS: 1 << 0, UP: 1 << 4, DOWN: 1 << 5, LEFT: 1 << 6, RIGHT: 1 << 7, CIRCLE: 1 << 8, PS: 1 << 16 };
+const TABS = [['games', 'Games'], ['check', 'Controller & sound'], ['car', 'Car']];
 
 class Psx {
     constructor(ctx) {
@@ -47,6 +49,7 @@ class Psx {
         this.menu = false;              // the pause menu over a running game
         this.note = null;               // { text, color, until }
         this.pairText = null; this.toneText = null;
+        this.sys = null;                // psx-core's last look at the head unit (the Car page)
         this.sock = null; this.buf = '';
         this.fd = null; this.head = Buffer.alloc(32); this.px = [null, null]; this.pi = 0; this.seq = -1; this.frame = null;
         this.lastPad = 0;
@@ -95,7 +98,8 @@ class Psx {
         } else if (e.ev === 'games') { this.games = e; this.sel = Math.min(this.sel, Math.max(0, e.games.length - 1)); }
         else if (e.ev === 'loaded') { if (!e.ok) this.flash('Couldn\'t start it: ' + e.text, C.red); }
         else if (e.ev === 'pair') { this.pairText = { text: e.text, color: e.busy ? C.amber : e.ok ? C.green : C.red }; }
-        else if (e.ev === 'tone') { this.toneText = { text: e.text, color: e.ok ? C.green : C.red }; }
+        else if (e.ev === 'tone') this.toneText = e;
+        else if (e.ev === 'sys') this.sys = e;
         else if (e.ev === 'message') this.flash(e.text, C.dim, 4000);
         else if (e.ev === 'menu') { if (this.playing()) this.toggleMenu(); }
         else if (e.ev === 'pad') this.onPad(e.b);
@@ -121,7 +125,10 @@ class Psx {
         const items = this.menuItems();
         if (down & PAD.UP) this.sel = Math.max(0, this.sel - 1);
         if (down & PAD.DOWN) this.sel = Math.min(items.length - 1, this.sel + 1);
-        if ((down & (PAD.LEFT | PAD.RIGHT)) && !this.playing()) { this.tab = this.tab === 'games' ? 'check' : 'games'; this.sel = 0; }
+        if ((down & (PAD.LEFT | PAD.RIGHT)) && !this.playing()) {
+            const i = TABS.findIndex((t) => t[0] === this.tab);
+            this.openTab(TABS[(i + (down & PAD.RIGHT ? 1 : TABS.length - 1)) % TABS.length][0]);
+        }
         if ((down & PAD.CROSS) && items[this.sel]) items[this.sel].run();
         if ((down & PAD.CIRCLE) && this.menu) this.toggleMenu();
     }
@@ -129,6 +136,7 @@ class Psx {
     menuItems() {
         if (this.playing() && this.menu) return this.pauseItems();
         if (this.tab === 'games') return ((this.games && this.games.games) || []).map((g) => ({ run: () => this.play(g) }));
+        if (this.tab === 'car') return [{ run: () => this.send('sys') }];
         return [{ run: () => this.send('pair') }, { run: () => this.send('tone') }];
     }
     pauseItems() {
@@ -181,6 +189,7 @@ class Psx {
             this.tabBar(cv);
             if (!this.sock) this.noCore(cv);
             else if (this.tab === 'games') this.gamesTab(cv);
+            else if (this.tab === 'car') this.carTab(cv);
             else this.checkTab(cv);
         }
         if (play && this.menu) this.pauseMenu(cv);
@@ -192,13 +201,18 @@ class Psx {
         return this.ctx.ui.image('MAIN_GFX', cv);
     }
 
+    openTab(id) {
+        this.tab = id; this.sel = 0;
+        this.send(id === 'games' ? 'list' : id === 'car' ? 'sys' : 'status');
+        this.kick();
+    }
     tabBar(cv) {
         let x = X0;
-        [['games', 'Games'], ['check', 'Controller & sound']].forEach(([id, name]) => {
+        TABS.forEach(([id, name]) => {
             const sel = id === this.tab, w = cv.textWidth(name, 18, B);
             cv.text(name, x, TAB_Y + 36, 18, sel ? C.text : C.dim, sel ? B : L);
             if (sel) cv.fillRect(x, TAB_Y + TAB_H - 5, w, 3, C.text);
-            cv.target(x - 14, TAB_Y + 2, w + 28, TAB_H - 4, () => { this.tab = id; this.sel = 0; if (id === 'games') this.send('list'); else this.send('status'); this.kick(); }, 'tab:' + id, 8);
+            cv.target(x - 14, TAB_Y + 2, w + 28, TAB_H - 4, () => this.openTab(id), 'tab:' + id, 8);
             x += w + 40;
         });
         cv.fillRect(X0, TAB_Y + TAB_H, W - 2 * X0, 1, C.line);
@@ -254,6 +268,10 @@ class Psx {
                 'A copy of your own disc: PSX can\'t download games. Your PlayStation\'s BIOS (SCPH1001.BIN) on the stick gives the startup screen.',
             ].forEach((t, i) => cv.text(t, X0, CT + 92 + i * 30, 16, i === 2 ? C.dim : C.text, L));
             pill(cv, X0, CT + 200, 220, 46, 'Look again', 'outline', () => this.send('list'), 'rescan');
+            const sticks = (this.games && this.games.sticks) || [];
+            cv.text(sticks.length ? 'USB sticks seen' : 'No USB stick seen: plugged in, it shows here by itself. Not showing? The Car page says what the head unit has.',
+                X0 + 250, CT + 228, 15, sticks.length ? C.dim : C.amber, sticks.length ? B : L);
+            sticks.slice(0, 3).forEach((t, i) => cv.text(t, X0 + 250, CT + 254 + i * 22, 14, C.text, L));
             return;
         }
         const rowH = 52, top = CT + 8, maxRows = Math.floor((H - 84 - top) / rowH);
@@ -279,8 +297,10 @@ class Psx {
         let yl = y + 34;
         if (!pads.length) {
             cv.text('None connected', X0, yl, 18, C.amber, B);
-            ['Plug a PS4 or PS5 controller in with its USB cable, or pair it over Bluetooth:',
-                'hold PS + Share (PS4) or PS + Create (PS5) until the light flashes, then tap Pair.'].forEach((t, i) => cv.text(t, X0, yl + 30 + i * 24, 15, C.text, L));
+            (bt.bluetoothctl ? ['Plug a PS4 or PS5 controller in with its USB cable, or pair it over Bluetooth:',
+                'hold PS + Share (PS4) or PS + Create (PS5) until the light flashes, then tap Pair.']
+                : ['Plug a PS4 or PS5 controller in with its USB cable: this head unit has no Bluetooth', 'that apps can use. Not showing up? The Car page says if the car sees it.'])
+                .forEach((t, i) => cv.text(t, X0, yl + 30 + i * 24, 15, C.text, L));
             yl += 92;
         } else {
             pads.forEach((p) => { cv.text('Player ' + p.player + ': ' + p.name, X0, yl, 18, C.green, B); cv.text(p.via, X0 + colW - 160, yl, 14, C.dim, L); yl += 32; });
@@ -292,11 +312,16 @@ class Psx {
         if (this.pairText) wrap(cv, this.pairText.text, 15, colW).forEach((t, i) => cv.text(t, X0, yl + 76 + i * 22, 15, this.pairText.color, L));
         y = CT + 18;
         head('Sound', xr, y);
-        cv.text(snd.player ? 'Through ' + snd.player : (snd.pacat || snd.aplay) ? 'Player found: ' + (snd.pacat ? 'pacat' : 'aplay') : 'No sound player found', xr, y + 34, 18, snd.player || snd.pacat || snd.aplay ? C.text : C.amber, B);
-        wrap(cv, snd.state || '', 15, colW).forEach((t, i) => cv.text(t, xr, y + 62 + i * 22, 15, C.dim, L));
-        pill(cv, xr, y + 108, 200, 46, 'Test sound', 'outline', () => this.send('tone'), 'tone');
-        if (this.sel === 1) cv.strokeRoundRect(xr - 4, y + 104, 208, 54, 27, 2, C.blue);
-        if (this.toneText) wrap(cv, this.toneText.text, 14, colW - 230).forEach((t, i) => cv.text(t, xr + 224, y + 124 + i * 20, 14, this.toneText.color, L));
+        const sndLine = snd.player ? 'Through ' + snd.player : snd.saved ? 'Games use ' + snd.saved
+            : snd.outputs ? snd.outputs + ' output' + (snd.outputs === 1 ? '' : 's') + ' found: tap Test sound' : 'No sound output found';
+        cv.text(sndLine.slice(0, 64), xr, y + 34, 18, snd.player || snd.saved || snd.outputs ? C.text : C.amber, B);
+        const tt = this.toneText;
+        const toneLines = tt ? (tt.ok ? 'Played on ' + tt.out + ' (' + tt.n + ' of ' + tt.of + '). Heard it? Games use it. Nothing? Tap again for the next.' : tt.text)
+            : 'Each tap plays a tone on the next output; the last one tapped is the one games use.';
+        wrap(cv, toneLines, 14, colW - 230).forEach((t, i) => cv.text(t, xr + 224, y + 74 + i * 20, 14, tt ? (tt.ok ? C.green : C.red) : C.dim, L));
+        pill(cv, xr, y + 62, 200, 46, 'Test sound', 'outline', () => this.send('tone'), 'tone');
+        if (this.sel === 1) cv.strokeRoundRect(xr - 4, y + 58, 208, 54, 27, 2, C.blue);
+        if (tt && tt.skipped) wrap(cv, 'Skipped: ' + tt.skipped, 13, colW).slice(0, 2).forEach((t, i) => cv.text(t, xr, y + 136 + i * 18, 13, C.dim, L));
         y = CT + 214;
         head('Bluetooth', xr, y);
         cv.text((bt.adapters || 0) + ' adapter' + (bt.adapters === 1 ? '' : 's') + ', BlueZ ' + (bt.bluez ? 'running' : 'not found') + ', bluetoothctl ' + (bt.bluetoothctl ? 'yes' : 'no'), xr, y + 30, 15, C.text, L);
@@ -305,6 +330,45 @@ class Psx {
         cv.text(st.bios ? st.bios.toUpperCase() + ': the PlayStation startup screen is on' : 'Built in: games start straight away, no startup screen', xr, y + 30, 15, st.bios ? C.green : C.text, L);
         if (!st.bios) cv.text('Your PlayStation\'s BIOS (SCPH1001.BIN or similar) on the USB stick is picked up by itself.', xr, y + 54, 14, C.dim, L);
         cv.text('psx-core ' + (st.version || '?') + (this.parked.speed() !== null ? '   speed ' + Math.round(this.parked.speed()) + ' km/h' : ''), xr, y + 84, 14, C.dim, L);
+    }
+
+    /** what psx-core sees on the head unit: for a photo when a stick, a controller or the sound isn't found */
+    carTab(cv) {
+        const s = this.sys;
+        pill(cv, W - X0 - 150, TAB_Y + 8, 150, 42, 'Look again', 'outline', () => this.send('sys'), 'sys');
+        if (this.sel === 0) cv.strokeRoundRect(W - X0 - 154, TAB_Y + 4, 158, 50, 25, 2, C.blue);
+        if (!s) { cv.text('Asking psx-core...', X0, CT + 50, 18, C.dim, L); return; }
+        const gap = 32, colW = (W - 2 * X0 - 2 * gap) / 3;
+        const sticks = s.mounts.filter((m) => /^USB stick: /.test(m)).map((m) => m.slice(11));
+        const others = s.mounts.filter((m) => !/^USB stick: /.test(m));
+        const cols = [
+            [['USB sticks', sticks, 'none mounted'], ['USB disks the kernel sees', s.disks, 'none'], ['Other mounts', others, 'none']],
+            [['USB devices', s.usb, 'none (the controller isn\'t seen on USB)'],
+                ['Input devices', s.input.concat([s.hidraw + ' hidraw node' + (s.hidraw === 1 ? '' : 's') + ', usbfs ' + (s.usbfs ? 'yes' : 'no')]), 'none']],
+            [['Sound', s.sound, 'no ALSA card, no player' + (s.snd_dev ? '' : ' (no /dev/snd)')], ['Sound and USB services', [s.procs.join(', ')].filter(Boolean), 'none found'],
+                ['Programs', [s.progs.join(', ')].filter(Boolean), 'none of pacat, aplay, gst-launch, bluetoothctl']],
+        ];
+        const bottom = H - 26;
+        cols.forEach((sections, c) => {
+            const x = X0 + c * (colW + gap);
+            let y = CT + 10;
+            sections.forEach(([title, lines, empty]) => {
+                if (y > bottom - 30) return;
+                cv.text(title, x, y, 14, C.dim, B);
+                y += 22;
+                const all = lines.length ? lines : [empty];
+                for (const line of all) {
+                    for (const t of wrap(cv, line, 13, colW).slice(0, 3)) {
+                        if (y > bottom) { cv.text('...', x, y, 13, C.dim, L); y += 99; break; }
+                        cv.text(t, x, y, 13, lines.length ? C.text : C.amber, L);
+                        y += 19;
+                    }
+                    if (y > bottom) break;
+                }
+                y += 14;
+            });
+        });
+        cv.text('psx-core ' + (s.version || '?') + ': what it sees on this head unit. A photo of this page says why a stick, a controller or the sound isn\'t found.', X0, H - 6, 13, C.dim, L);
     }
 
     gameView(cv) {
